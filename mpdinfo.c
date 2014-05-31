@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <signal.h>
 #include <pthread.h>
+#include <sys/wait.h>
 
 #include <mpd/async.h>
 #include <mpd/status.h>
@@ -12,6 +13,8 @@
 #include <mpd/search.h>
 #include <mpd/tag.h>
 #include <mpd/client.h>
+
+#include "parse.h"
 
 int DEBUG = 1;
 int REFRESH = 1;
@@ -27,13 +30,18 @@ void debug(char* status, const char* message) {
 int mpdinfo_connect(struct mpd_connection ** conn) {
 	char* mpdhost = getenv("MPDHOST");
 	if (mpdhost == NULL) {
+		debug("FAIL", "no host is set");
 		return -1;
 	}
 	char* mpdport_string = getenv("MPDPORT");
+	
+	unsigned long int mpdport = 6600;
+	
 	if (mpdport_string == NULL) {
-		return -1;
+		debug("WARNING", "no port is set, using default");
+	} else {
+		mpdport = strtoul(mpdport_string, NULL, 10);
 	}
-	unsigned long int mpdport = strtoul(mpdport_string, NULL, 10);
 	*conn = mpd_connection_new(mpdhost,mpdport, 0);
 	if (*conn == NULL) {
 		debug("FAIL", "Out of memory");
@@ -84,30 +92,33 @@ char* getStatus() {
 
 }
 
-const char* getTitle() {
-	const struct mpd_song *song = mpd_run_current_song(conn);
+char* getTitle() {
+	struct mpd_song *song = mpd_run_current_song(conn);
 
 	if (song == NULL) {
 		return "";
 	}
 
-	const char* title = mpd_song_get_tag(song, MPD_TAG_TITLE, 0);
-	//mpd_song_free(song);
+	const char* tit = mpd_song_get_tag(song, MPD_TAG_TITLE, 0);
+	char* title = malloc(strlen(tit) +1);
+	strcpy(title, tit);
+	mpd_song_free(song);
 
 	return title;
 }
 
-const char* getArtist() {
+char* getArtist() {
 
-	const struct mpd_song *song = mpd_run_current_song(conn);
+	struct mpd_song *song = mpd_run_current_song(conn);
 	
 	if (song == NULL) {
 		return "";
 	}
-					
-	const char* artist = mpd_song_get_tag(song, MPD_TAG_ARTIST, 0);
-	//mpd_song_free(song);
-							
+
+	const char* art = mpd_song_get_tag(song, MPD_TAG_ARTIST, 0);
+	char* artist = malloc(strlen(art) +1);
+	strcpy(artist, art);
+	mpd_song_free(song);
 	return artist;
 }
 
@@ -124,14 +135,17 @@ int getVolume() {
 
 void refresh() {
 	char* status = getStatus();
-	const char* title = getTitle();
+	char* title = getTitle();
 	int volume = getVolume();
-	const char* artist = getArtist();
+	char* artist = getArtist();
 
 	printf("Status: %s\n", status);
 	printf("Volume: %d%%\n", volume);
 	printf("Artist: %s\n", artist);
 	printf("Title: %s\n", title);
+
+	free(title);
+	free(artist);
 }
 
 void force_refresh() {
@@ -150,8 +164,9 @@ void* wait_for_action() {
 
 int main(int argc, char** argv) {
 
+	parseArguments(argc, argv);
+
 	int value = mpdinfo_connect(&conn);
-	int x = 0;
 
 	if (value < 0) {
 		return -1;
@@ -161,7 +176,7 @@ int main(int argc, char** argv) {
 
 	pthread_t pid = 0;
 
-	pthread_create(&pid, NULL, wait_for_action, &x);
+	pthread_create(&pid, NULL, wait_for_action, NULL);
 
 	debug("debug","threading");
 
@@ -171,7 +186,10 @@ int main(int argc, char** argv) {
 
 	QUIT = 1;
 	force_refresh();
+	int stat_loc;
+	waitpid(pid, &stat_loc, 0);
 
-	mpd_connection_free(conn);
+	mpd_connection_free(conn);	
+
 	return 0;
 }

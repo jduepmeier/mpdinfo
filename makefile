@@ -1,5 +1,5 @@
-CFLAGS=-Wall -lmpdclient -lpthread
+CFLAGS=-Wall -lmpdclient -lpthread -g
 all: mpdinfo
 
 
-mpdinfo: mpdinfo.c
+mpdinfo: mpdinfo.c parse.c help.c format.c
