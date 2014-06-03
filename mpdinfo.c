@@ -15,17 +15,11 @@
 #include <mpd/client.h>
 
 #include "parse.h"
+#include "debug.h"
 
-int DEBUG = 1;
 int REFRESH = 1;
 int QUIT = 0;
 struct mpd_connection* conn = NULL;
-
-void debug(char* status, const char* message) {
-	if (DEBUG) {
-		printf("%s: %s\n", status, message);
-	}
-}
 
 int mpdinfo_connect(struct mpd_connection ** conn) {
 	char* mpdhost = getenv("MPDHOST");
@@ -162,6 +156,12 @@ void* wait_for_action() {
 	return 0;
 }
 
+void quit() {
+
+	QUIT = 1;
+	force_refresh();
+}
+
 int main(int argc, char** argv) {
 
 	parseArguments(argc, argv);
@@ -181,13 +181,9 @@ int main(int argc, char** argv) {
 	debug("debug","threading");
 
 	signal(SIGHUP, force_refresh);
+	signal(SIGQUIT, quit);
 
-	getchar();
-
-	QUIT = 1;
-	force_refresh();
-	int stat_loc;
-	waitpid(pid, &stat_loc, 0);
+	pthread_join(pid, NULL);
 
 	mpd_connection_free(conn);	
 

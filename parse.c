@@ -3,6 +3,7 @@
 
 #include "format.h"
 #include "help.h"
+#include "debug.h"
 
 void parseArguments(int argc, char* argv[]) {
 
@@ -16,7 +17,7 @@ void parseArguments(int argc, char* argv[]) {
             }  else if (!strcmp(argv[i], "--help") || !strcmp(argv[i], "-h")) {
                 printHelp();
             } else if (!strcmp(argv[i], "--debug") || !strcmp(argv[i], "-d")) {
-                //setDebug(1);
+                setDebug(1);
             } else {
                 printf("Invalid arguments.\n");
                 printHelp();
