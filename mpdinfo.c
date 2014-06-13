@@ -16,6 +16,8 @@
 
 #include "parse.h"
 #include "debug.h"
+#include "format.h"
+#include "replace.h"
 
 int REFRESH = 1;
 int QUIT = 0;
@@ -24,8 +26,9 @@ struct mpd_connection* conn = NULL;
 int mpdinfo_connect(struct mpd_connection ** conn) {
 	char* mpdhost = getenv("MPDHOST");
 	if (mpdhost == NULL) {
-		debug("FAIL", "no host is set");
-		return -1;
+		debug("FAIL", "no host is set, using localhost");
+		mpdhost = "localhost";
+		//return -1;
 	}
 	char* mpdport_string = getenv("MPDPORT");
 	
@@ -132,11 +135,28 @@ void refresh() {
 	char* title = getTitle();
 	int volume = getVolume();
 	char* artist = getArtist();
+	
+	char* format = getFormatString();
 
-	printf("Status: %s\n", status);
-	printf("Volume: %d%%\n", volume);
-	printf("Artist: %s\n", artist);
-	printf("Title: %s\n", title);
+	debug("DEBUG", format);
+
+	char volumeString[4];
+
+	sprintf(volumeString, "%d", volume);
+
+	format = stringReplace("%artist%", artist, format);
+	format = stringReplace("%title%", title, format);
+ 	format = stringReplace("%status%", status, format);
+	format = stringReplace("%volume%", volumeString, format);
+	
+	printf("%s\f", format);
+
+	//printf("Status: %s\n", status);
+	//printf("Volume: %d%%\n", volume);
+	//printf("Artist: %s\n", artist);
+	//printf("Title: %s\n", title);
+
+	fflush(stdout);
 
 	free(title);
 	free(artist);
@@ -172,13 +192,12 @@ int main(int argc, char** argv) {
 		return -1;
 	}
 
-	debug("debug","starting");
-
+	debug("debug","starting\f");
 	pthread_t pid = 0;
 
 	pthread_create(&pid, NULL, wait_for_action, NULL);
 
-	debug("debug","threading");
+	debug("debug","threading\f");
 
 	signal(SIGHUP, force_refresh);
 	signal(SIGQUIT, quit);

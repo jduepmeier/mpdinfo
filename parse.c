@@ -11,8 +11,8 @@ void parseArguments(int argc, char* argv[]) {
     int i;
     for (i = 1; i < argc; i++) {
         if (*argv[i] == '-') {
-            if (i + 1 < argc && (!strcmp(argv[i], "--format") || !strcmp(argv[i], "-f"))) {
-                format(argv[i + 1]);
+            if (i + 1 < argc && (!strcmp(argv[i], "--format") || !strcmp(argv[i], "-f"))) { 
+		format(argv[i + 1]);
                 i++;
             }  else if (!strcmp(argv[i], "--help") || !strcmp(argv[i], "-h")) {
                 printHelp();

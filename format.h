@@ -2,4 +2,4 @@
 
 void format(char* format);
 
-char* formatOutput();
+char* getFormatString();

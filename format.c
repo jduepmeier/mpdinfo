@@ -1,11 +1,14 @@
+#include <string.h>
+#include <stdlib.h>
+
+char formatString[500]  = "Current Track (Vol %volume%%): \n -%status%- %artist% - %title%)";
 
 void format(char* format) {
-	//TODO format string
-	
-	return;
+
+	strcpy(formatString, format);
 }
 
-char* formatOutput() {
+char* getFormatString() {
 
-	return "";
+	return formatString;
 }
