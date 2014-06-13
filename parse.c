@@ -18,7 +18,9 @@ void parseArguments(int argc, char* argv[]) {
                 printHelp();
             } else if (!strcmp(argv[i], "--debug") || !strcmp(argv[i], "-d")) {
                 setDebug(1);
-            } else {
+            } else if (i + 1 < argc && (!strcmp(argv[i], "--stopped") || !strcmp(argv[i], "-s"))) {
+	    	formatStopped(argv[i + 1]);
+	    } else {
                 printf("Invalid arguments.\n");
                 printHelp();
             }

@@ -135,10 +135,17 @@ void refresh() {
 	char* title = getTitle();
 	int volume = getVolume();
 	char* artist = getArtist();
-	
-	char* format = getFormatString();
+
+	char* format = malloc(500);
+
+	if (strcmp(status, "stopped") == 0) {
+		strcpy(format, getFormatStoppedString());
+	} else {
+		strcpy(format, getFormatString());
+	}
 
 	debug("DEBUG", format);
+	debug("DEBUG", status);
 
 	char volumeString[4];
 
@@ -148,18 +155,12 @@ void refresh() {
 	format = stringReplace("%title%", title, format);
  	format = stringReplace("%status%", status, format);
 	format = stringReplace("%volume%", volumeString, format);
-	
-	printf("%s\f", format);
-
-	//printf("Status: %s\n", status);
-	//printf("Volume: %d%%\n", volume);
-	//printf("Artist: %s\n", artist);
-	//printf("Title: %s\n", title);
-
+	printf("%s\n\f", format);
 	fflush(stdout);
 
 	free(title);
 	free(artist);
+	free(format);
 }
 
 void force_refresh() {
