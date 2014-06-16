@@ -24,11 +24,10 @@ int QUIT = 0;
 struct mpd_connection* conn = NULL;
 
 int mpdinfo_connect(struct mpd_connection ** conn) {
-	char* mpdhost = getenv("MPDHOST");
+	char * mpdhost = getenv("MPDHOST");
 	if (mpdhost == NULL) {
 		debug("FAIL", "no host is set, using localhost");
 		mpdhost = "localhost";
-		//return -1;
 	}
 	char* mpdport_string = getenv("MPDPORT");
 	
@@ -39,7 +38,8 @@ int mpdinfo_connect(struct mpd_connection ** conn) {
 	} else {
 		mpdport = strtoul(mpdport_string, NULL, 10);
 	}
-	*conn = mpd_connection_new(mpdhost,mpdport, 0);
+	printf("%s : %lu", mpdhost, mpdport);
+	*conn = mpd_connection_new("fsi-igel", 6600,0);//mpdhost,mpdport, 0);
 	if (*conn == NULL) {
 		debug("FAIL", "Out of memory");
 		return -1;
@@ -97,6 +97,15 @@ char* getTitle() {
 	}
 
 	const char* tit = mpd_song_get_tag(song, MPD_TAG_TITLE, 0);
+	
+	if (tit == NULL) {
+		return "";
+	}
+	
+	if (strcmp(tit, "") == 0) {
+		return "";
+	}
+
 	char* title = malloc(strlen(tit) +1);
 	strcpy(title, tit);
 	mpd_song_free(song);
@@ -113,6 +122,15 @@ char* getArtist() {
 	}
 
 	const char* art = mpd_song_get_tag(song, MPD_TAG_ARTIST, 0);
+
+	if (art == NULL) {
+		return "";
+	}
+
+	if (strcmp(art,"") == 0) {
+		return "";
+	}
+
 	char* artist = malloc(strlen(art) +1);
 	strcpy(artist, art);
 	mpd_song_free(song);
@@ -158,8 +176,12 @@ void refresh() {
 	printf("%s\n\f", format);
 	fflush(stdout);
 
-	free(title);
-	free(artist);
+	if (strcmp(title, "") != 0) {
+		free(title);
+	}
+	if (strcmp(artist, "") != 0) {
+		free(artist);
+	}
 	free(format);
 }
 
