@@ -87,6 +87,49 @@ void* getTokenAction(TOKEN_TYPE type) {
 	}
 }
 
+void formatControls(char* format, char* output) {
+	
+	int i = 0;
+	int j = 0;
+	int length = strlen(format);
+
+	while (i < length) {
+
+		if (format[i] == '\\') {
+			i++;
+			if (i < length) {
+				switch (format[i]) {
+
+					case 'f':
+						output[j] = '\f';
+						break;
+					case 'n':
+						output[j] = '\n';
+						break;
+					case 't':
+						output[j] = '\t';
+						break;
+					default:
+						output[j] = '\\';
+						j++;
+						i--;
+						break;
+				}
+				j++;
+				i++;
+			} else {
+				output[j] = '\\';
+				j++;
+			}
+		} else {
+			output[j] = format[i];
+			j++;
+			i++;
+		}
+	}
+	output[j] = '\0';
+}
+
 char* generateOutputString() {
 
 	FormatToken** tokens = NULL;
@@ -136,7 +179,10 @@ char* generateOutputString() {
 	return output;
 }
 
-FormatToken** buildTokenStructure(char* format) {
+FormatToken** buildTokenStructure(char* f) {
+
+	char* format = malloc(strlen(f) + 1);
+	formatControls(f, format);
 
 	FormatToken** tokens = NULL;
 
@@ -148,10 +194,10 @@ FormatToken** buildTokenStructure(char* format) {
 
 	tokens = realloc(tokens, (t + 1) * sizeof(FormatToken*));
 	tokens[t] = NULL;
-
+	int len = strlen(format);
 
 	// for every char
-	while (i < strlen(format)) {
+	while (i < len) {
 		// delimiter for tokens
 		if (format[i] == '%') {
 			char* tokenstr = getTokenStr(format + i);
@@ -192,7 +238,6 @@ FormatToken** buildTokenStructure(char* format) {
 		} else {
 			i++;
 		}
-
 	}
 
 	if (current != (format + i)) {
@@ -210,6 +255,7 @@ FormatToken** buildTokenStructure(char* format) {
 		tokens[t] = NULL;
 
 	}
+	free(format);
 	return tokens;
 
 }
