@@ -25,5 +25,7 @@ void parseArguments(int argc, char* argv[]) {
                 printHelp();
             }
         }
+    
     }
+    checkFormat();
 }

@@ -2,7 +2,6 @@
 
 void format(char* format);
 void formatStopped(char* format);
-
-char* getFormatString();
-
-char* getFormatStoppedString();
+char* generateOutputString();
+void checkFormat();
+void free_token_structs();

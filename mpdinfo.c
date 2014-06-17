@@ -38,8 +38,7 @@ int mpdinfo_connect(struct mpd_connection ** conn) {
 	} else {
 		mpdport = strtoul(mpdport_string, NULL, 10);
 	}
-	printf("%s : %lu", mpdhost, mpdport);
-	*conn = mpd_connection_new("fsi-igel", 6600,0);//mpdhost,mpdport, 0);
+	*conn = mpd_connection_new(mpdhost, mpdport,0);
 	if (*conn == NULL) {
 		debug("FAIL", "Out of memory");
 		return -1;
@@ -64,29 +63,39 @@ int getStatusStruct(struct mpd_status **mpdstatus) {
 	return 1;
 }
 
-char* getStatus() {
-
+int getStatus() {
 	struct mpd_status *mpdstatus = NULL;
-	char* output = "";
 
 	if (!getStatusStruct(&mpdstatus)) {
-		return output;
+		return -1;
 	}
 	int status = mpd_status_get_state(mpdstatus);
 
-	if (status == MPD_STATE_PLAY) {
-		output = "playing";
-	} else if (status == MPD_STATE_PAUSE) {
-		output = "pause";
-	} else if (status == MPD_STATE_STOP) {
-		output = "stopped";
-	} else {
-		output = "unkown";
-	}
-	debug("DEBUG", output);
 	mpd_status_free(mpdstatus);
-	return output;
 
+	return status;
+}
+
+char* getStatusString() {
+
+	char* output = malloc(8);
+	int status = getStatus();
+
+	switch (status) {
+
+		case MPD_STATE_PLAY:
+			strcpy(output,"playing");
+			return output;
+		case MPD_STATE_PAUSE:
+			strcpy(output,"pause");
+			return output;
+		case MPD_STATE_STOP:
+			strcpy(output,"stopped");
+			return output;
+		default:
+			strcpy(output,"unkown");
+			return output;
+	}
 }
 
 char* getTitle() {
@@ -148,41 +157,17 @@ int getVolume() {
 	return volume;
 }
 
+char* getVolumeString() {
+	int vol = getVolume();
+	char* volString = malloc(4);
+	sprintf(volString, "%d", vol);
+	return volString;
+}
+
 void refresh() {
-	char* status = getStatus();
-	char* title = getTitle();
-	int volume = getVolume();
-	char* artist = getArtist();
-
-	char* format = malloc(500);
-
-	if (strcmp(status, "stopped") == 0) {
-		strcpy(format, getFormatStoppedString());
-	} else {
-		strcpy(format, getFormatString());
-	}
-
-	debug("DEBUG", format);
-	debug("DEBUG", status);
-
-	char volumeString[4];
-
-	sprintf(volumeString, "%d", volume);
-
-	format = stringReplace("%artist%", artist, format);
-	format = stringReplace("%title%", title, format);
- 	format = stringReplace("%status%", status, format);
-	format = stringReplace("%volume%", volumeString, format);
-	printf("%s\n\f", format);
-	fflush(stdout);
-
-	if (strcmp(title, "") != 0) {
-		free(title);
-	}
-	if (strcmp(artist, "") != 0) {
-		free(artist);
-	}
-	free(format);
+	
+	char* out = generateOutputString();
+	free(out);
 }
 
 void force_refresh() {
@@ -192,9 +177,12 @@ void force_refresh() {
 void* wait_for_action() {
 
 	do {
-		refresh(conn);
+		refresh();
 		mpd_run_idle(conn);
 	} while (!QUIT);
+	mpd_connection_free(conn);	
+	free_token_structs();
+
 
 	return 0;
 }
@@ -215,19 +203,14 @@ int main(int argc, char** argv) {
 		return -1;
 	}
 
-	debug("debug","starting\f");
 	pthread_t pid = 0;
 
 	pthread_create(&pid, NULL, wait_for_action, NULL);
-
-	debug("debug","threading\f");
 
 	signal(SIGHUP, force_refresh);
 	signal(SIGQUIT, quit);
 
 	pthread_join(pid, NULL);
-
-	mpd_connection_free(conn);	
 
 	return 0;
 }
