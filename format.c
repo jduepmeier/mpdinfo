@@ -7,15 +7,13 @@
 #include "debug.h"
 #include "mpdinfo.h"
 
-
-char* formatString  = "Current Track (Vol %volume%%):\n -%status%-\n %artist% - %title%";
-char* formatStoppedString = "-stopped-";
-
 #define STR_ARTIST "%artist%"
 #define STR_TITLE "%title%"
 #define STR_VOLUME "%volume%"
 #define STR_STATUS "%status%"
 
+char* formatString  = "Current Track (Vol %volume%%):\n -%status%-\n %artist% - %title%";
+char* formatStoppedString = "-stopped-";
 
 typedef enum {
 
@@ -30,8 +28,11 @@ typedef struct {
 
 } FormatToken;
 
-FormatToken** ppTokens = NULL;
-FormatToken** stopTokens = NULL;
+struct {
+	FormatToken** ppTokens;
+	FormatToken** stopTokens;
+	FormatToken** pauseTokens;
+} tokenStruct;
 
 char* getTokenStr(char* str) {
 	if (strncmp(str, STR_ARTIST,strlen(STR_ARTIST)) == 0) {
@@ -134,12 +135,24 @@ char* generateOutputString() {
 
 	FormatToken** tokens = NULL;
 
-	if (getStatus() == MPD_STATE_STOP) {
-		tokens = stopTokens;
-	} else {
-		tokens = ppTokens;
+	switch (getStatus()) {
+		case MPD_STATE_STOP:
+			tokens = tokenStruct.stopTokens;
+			break;
+		case MPD_STATE_PAUSE:
+			if (tokenStruct.pauseTokens) {
+				tokens = tokenStruct.pauseTokens;
+			} else {
+				tokens = tokenStruct.ppTokens;
+			}
+			break;
+		case MPD_STATE_PLAY:
+			tokens = tokenStruct.ppTokens;
+			break;
+		default:
+			tokens = tokenStruct.ppTokens;
+			break;
 	}
-
 
 	debug("VERBOSE", "begin output string generation");
 
@@ -262,11 +275,11 @@ FormatToken** buildTokenStructure(char* f) {
 
 void checkFormat() {
 
-	if (!stopTokens) {
-		stopTokens = buildTokenStructure(formatStoppedString);	
+	if (!tokenStruct.stopTokens) {
+		tokenStruct.stopTokens = buildTokenStructure(formatStoppedString);	
 	}
-	if (!ppTokens) {
-		ppTokens = buildTokenStructure(formatString);
+	if (!tokenStruct.ppTokens) {
+		tokenStruct.ppTokens = buildTokenStructure(formatString);
 	}
 
 
@@ -288,18 +301,24 @@ void free_token_struct(FormatToken** token) {
 }
 
 void free_token_structs() {
-	free_token_struct(ppTokens);
-	free_token_struct(stopTokens);
+	free_token_struct(tokenStruct.ppTokens);
+	free_token_struct(tokenStruct.stopTokens);
+	if (tokenStruct.pauseTokens) {
+		free_token_struct(tokenStruct.pauseTokens);
+	}
 }
 
 
-void format(char* format) {
+void formatPlay(char* format) {
 
-	ppTokens = buildTokenStructure(format);
+	tokenStruct.ppTokens = buildTokenStructure(format);
 }
 
-void formatStopped(char* format) {
+void formatStop(char* format) {
 
-	stopTokens = buildTokenStructure(format);
+	tokenStruct.stopTokens = buildTokenStructure(format);
 }
 
+void formatPause(char* format) {
+	tokenStruct.pauseTokens = buildTokenStructure(format);
+}

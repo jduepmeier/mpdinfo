@@ -1,7 +1,8 @@
 #pragma once
 
-void format(char* format);
-void formatStopped(char* format);
+void formatPlay(char* format);
+void formatPause(char* format);
+void formatStop(char* format);
 char* generateOutputString();
 void checkFormat();
 void free_token_structs();
