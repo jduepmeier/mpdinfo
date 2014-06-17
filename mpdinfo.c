@@ -17,7 +17,6 @@
 #include "parse.h"
 #include "debug.h"
 #include "format.h"
-#include "replace.h"
 
 int REFRESH = 1;
 int QUIT = 0;
