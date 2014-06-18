@@ -68,7 +68,6 @@ Category parseCategory(char* cat) {
 }
 
 void setMPDHost(char* host) {
-	printf("Host is set to: %s\n", host);
 	connectionInfo.host = malloc(strlen(host) + 1);
 	strcpy(connectionInfo.host, host);
 }
@@ -82,12 +81,10 @@ unsigned long int getMPDPort() {
 }
 
 void setMPDPort(char* port) {
-	printf("Port is set to: %s\n", port);
-	
 	connectionInfo.port = strtoul(port, NULL, 10);
 
 	if (connectionInfo.port == 0) {
-		printf("port not correct, using default port 6600");
+		debug("WARNING","port not correct, using default port 6600");
 		connectionInfo.port = 6600;
 	}
 }
@@ -95,11 +92,7 @@ void setMPDPort(char* port) {
 void parseConfigLineOutput(ConfigLine* cl) {
 	debug("DEBUG", "in output category parsing");
 
-
-	printf("current key: %s\n", cl->key);
-
 	if (!strncmp(cl->key, CONFIG_PLAY, strlen(CONFIG_PLAY))) {
-		printf("configurate play\n");
 		formatPlay(cl->value);
 		return;
 	}
@@ -258,6 +251,19 @@ void parseConfigFile(char* path) {
 }
 
 void parseArguments(int argc, char* argv[]) {
+
+	char* mpdhost = getenv("MPDHOST");
+	if (mpdhost == NULL) {
+		debug("DEBUG", "host is not set over env");
+		mpdhost = "localhost";
+	}
+	setMPDHost(mpdhost);
+
+	char* mpdport = getenv("MPDPORT");
+
+	if (mpdport != NULL) {
+		setMPDPort(mpdport);
+	}
 
     //parse arguments
     int i;

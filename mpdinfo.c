@@ -40,7 +40,6 @@ int mpdinfo_connect(struct mpd_connection ** conn) {
 
 	char* host = getMPDHost();
 	unsigned long int port = getMPDPort();
-	printf("host: %s:%li\n",host, port);
 	*conn = mpd_connection_new(host, port,0);
 	if (*conn == NULL) {
 		debug("FAIL", "Out of memory");
@@ -170,10 +169,14 @@ char* getVolumeString() {
 void refresh() {
 	
 	char* out = generateOutputString();
+	printf("%s\f\n", out);
+	fflush(stdout);
 	free(out);
+	
 }
 
 void force_refresh() {
+	debug("DEBUG","forcing refresh");
 	mpd_send_noidle(conn);
 }
 
@@ -182,6 +185,7 @@ void* wait_for_action() {
 	do {
 		refresh();
 		mpd_run_idle(conn);
+		debug("DEBUG", "refresh");
 	} while (!QUIT);
 	mpd_connection_free(conn);	
 	free_token_structs();
@@ -193,6 +197,7 @@ void* wait_for_action() {
 void quit() {
 
 	QUIT = 1;
+	debug("DEBUG", "now quitting");
 	force_refresh();
 }
 

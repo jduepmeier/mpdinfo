@@ -173,21 +173,13 @@ char* generateOutputString() {
 			args = malloc(strlen((char*) tokens[t]->data) + 1);
 			strcpy(args, tokens[t]->data);
 		}
-		debug("DEBUG: args", args);
 		next = malloc(strlen(output) + strlen(args) + 1);
 		sprintf(next, "%s%s", output, args);
 		free(args);
 		free(output);
-		debug("DEBUG: next", next);
 		output = next;
 		t++;
 	}
-
-	debug("DEBUG: output", output);
-
-	printf("%s\f\n", output);
-
-	fflush(stdout);
 
 	return output;
 }
