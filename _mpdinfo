@@ -1,0 +1,16 @@
+#compdef mpdinfo
+
+local curcontext="$curcontext" state line
+typeset -A opt_args
+
+_arguments -s -S \
+	{-c,--config}'[Spezifies a config file]' \
+	{-h,--help}'[Displays help]' \
+	{-d,--debug}'[Displays debugging information]' \
+	{-fs,--format=stop}'[formats the output string for status stopped]' \
+	{-fpa,--format=pause}'[formats the output string for status paused]' \
+	{-fpl,--format=play}'[Formats the output for status playing]' \
+	"*::file:_files" \
+	 && return 0
+
+return 1
