@@ -19,7 +19,7 @@ mpdinfo only loads the config with `--config <path-to-config>`.
 use
 =======
 mpdinfo waits for events from mpd. On every event all infos will be printed.
-At the end of every output, mpdinfo sends a formfeed (\f).
+At the end of every output, mpdinfo sends a formfeed (\f). 
 It works nicely with screen-message (sm).
 
 signals
