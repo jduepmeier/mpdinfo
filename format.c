@@ -175,7 +175,9 @@ char* generateOutputString() {
 		}
 		next = malloc(strlen(output) + strlen(args) + 1);
 		sprintf(next, "%s%s", output, args);
-		free(args);
+		if (strcmp(args, "") != 0) {
+			free(args);
+		}
 		free(output);
 		output = next;
 		t++;
