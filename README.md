@@ -14,7 +14,7 @@ MPDHOST sets the host
 
 MPDPORT sets the port
 
-You can use a config file, too. See [a relative link](sample.conf) for more info.
+You can use a config file, too. See [sample.conf](sample.conf) for more info.
 mpdinfo only loads the config with --config <path-to-config>.
 
 use
