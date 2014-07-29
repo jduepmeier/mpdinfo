@@ -17,10 +17,15 @@
 #include "parse.h"
 #include "debug.h"
 #include "format.h"
+#include "status.h"
 
 int REFRESH = 1;
 int QUIT = 0;
 struct mpd_connection* conn = NULL;
+
+void getConnection(struct mpd_connection** mpdconn) {
+	*mpdconn = conn;
+}
 
 int mpdinfo_connect(struct mpd_connection ** conn) {
 	/*char * mpdhost = getenv("MPDHOST");
@@ -53,117 +58,6 @@ int mpdinfo_connect(struct mpd_connection ** conn) {
 		return -1;
 	}
 	return 0;
-}
-
-int getStatusStruct(struct mpd_status **mpdstatus) {
-
-	*mpdstatus = mpd_run_status(conn);
-	if (!*mpdstatus) {
-		debug("FAIL", mpd_connection_get_error_message(conn));
-		return 0;
-	}
-	return 1;
-}
-
-int getStatus() {
-	struct mpd_status *mpdstatus = NULL;
-
-	if (!getStatusStruct(&mpdstatus)) {
-		return -1;
-	}
-	int status = mpd_status_get_state(mpdstatus);
-
-	mpd_status_free(mpdstatus);
-
-	return status;
-}
-
-char* getStatusString() {
-
-	char* output = malloc(8);
-	int status = getStatus();
-
-	switch (status) {
-
-		case MPD_STATE_PLAY:
-			strcpy(output,"playing");
-			return output;
-		case MPD_STATE_PAUSE:
-			strcpy(output,"pause");
-			return output;
-		case MPD_STATE_STOP:
-			strcpy(output,"stopped");
-			return output;
-		default:
-			strcpy(output,"unkown");
-			return output;
-	}
-}
-
-char* getTitle() {
-	struct mpd_song *song = mpd_run_current_song(conn);
-
-	if (song == NULL) {
-		return "";
-	}
-
-	const char* tit = mpd_song_get_tag(song, MPD_TAG_TITLE, 0);
-	
-	if (tit == NULL) {
-		return "";
-	}
-	
-	if (strcmp(tit, "") == 0) {
-		return "";
-	}
-
-	char* title = malloc(strlen(tit) +1);
-	strcpy(title, tit);
-	mpd_song_free(song);
-
-	return title;
-}
-
-char* getArtist() {
-
-	struct mpd_song *song = mpd_run_current_song(conn);
-	
-	if (song == NULL) {
-		return "";
-	}
-
-	const char* art = mpd_song_get_tag(song, MPD_TAG_ARTIST, 0);
-
-	if (art == NULL) {
-		return "";
-	}
-
-	if (strcmp(art,"") == 0) {
-		return "";
-	}
-
-	char* artist = malloc(strlen(art) +1);
-	strcpy(artist, art);
-	mpd_song_free(song);
-	return artist;
-}
-
-int getVolume() {
-	struct mpd_status* status = NULL;
-	if(!getStatusStruct(&status)) {
-		return -1;
-	}
-
-	int volume = mpd_status_get_volume(status);
-	mpd_status_free(status);
-	return volume;
-}
-
-char* getVolumeString() {
-	int vol = getVolume();
-	char* volString = malloc(4);
-	sprintf(volString, "%d", vol);
-	return volString;
 }
 
 int mpdinfo_reconnect() {

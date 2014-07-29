@@ -6,18 +6,21 @@
 
 #include "debug.h"
 #include "mpdinfo.h"
+#include "status.h"
 
 #define STR_ARTIST "%artist%"
 #define STR_TITLE "%title%"
 #define STR_VOLUME "%volume%"
 #define STR_STATUS "%status%"
+#define STR_REPEAT "%repeat%"
+#define STR_DBUPDATE "%dbupdate%"
 
 char* formatString  = "Current Track (Vol %volume%%):\n -%status%-\n %artist% - %title%";
 char* formatStoppedString = "-stopped-";
 
 typedef enum {
 
-	TOKEN_ARTIST, TOKEN_TITLE, TOKEN_STATUS, TOKEN_VOLUME, TOKEN_TEXT 
+	TOKEN_ARTIST, TOKEN_TITLE, TOKEN_STATUS, TOKEN_VOLUME, TOKEN_REPEAT, TOKEN_DBUPDATE, TOKEN_TEXT 
 
 } TOKEN_TYPE;
 
@@ -49,6 +52,12 @@ char* getTokenStr(char* str) {
 	if (strncmp(str, STR_STATUS, strlen(STR_STATUS)) == 0) {
 		return STR_STATUS;
 	}
+	if (strncmp(str, STR_REPEAT, strlen(STR_REPEAT)) == 0) {
+		return STR_REPEAT;
+	}
+	if (strncmp(str, STR_DBUPDATE, strlen(STR_DBUPDATE)) == 0) {
+                return STR_DBUPDATE;
+        }
 	return "";
 }
 
@@ -68,6 +77,12 @@ TOKEN_TYPE getTokenEnum(char* str) {
 	if (strncmp(str, STR_STATUS, strlen(STR_STATUS)) == 0) {
 		return TOKEN_STATUS;
 	}
+	if (strncmp(str, STR_REPEAT, strlen(STR_REPEAT)) == 0) {
+		return TOKEN_REPEAT;
+	}
+	if (strncmp(str, STR_DBUPDATE, strlen(STR_DBUPDATE)) == 0) {
+                return TOKEN_DBUPDATE;
+        }
 	return -1;
 }
 
@@ -79,10 +94,14 @@ void* getTokenAction(TOKEN_TYPE type) {
 			return &getArtist;
 		case TOKEN_TITLE:
 			return &getTitle;
+		case TOKEN_REPEAT:
+			return &getRepeatString;
 		case TOKEN_VOLUME:
 			return &getVolumeString;
 		case TOKEN_STATUS:
 			return &getStatusString;
+		case TOKEN_DBUPDATE:
+			return &getDBUpdateString;
 		default:
 			return NULL;
 	}
@@ -173,6 +192,7 @@ char* generateOutputString() {
 			args = malloc(strlen((char*) tokens[t]->data) + 1);
 			strcpy(args, tokens[t]->data);
 		}
+		debug("DEBUG", args);
 		next = malloc(strlen(output) + strlen(args) + 1);
 		sprintf(next, "%s%s", output, args);
 		if (strcmp(args, "") != 0) {
