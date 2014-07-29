@@ -43,7 +43,7 @@ int mpdinfo_connect(struct mpd_connection ** conn) {
 	*conn = mpd_connection_new(host, port,0);
 	if (*conn == NULL) {
 		debug("FAIL", "Out of memory");
-		return -1;
+		return -2;
 	}
 
 	if (mpd_connection_get_error(*conn) != MPD_ERROR_SUCCESS) {
@@ -166,12 +166,40 @@ char* getVolumeString() {
 	return volString;
 }
 
-void refresh() {
+int mpdinfo_reconnect() {
+	if (conn) {
+		mpd_connection_free(conn);
+	}
+	if (mpdinfo_connect(&conn) == -1) {
+		if (QUIT) {
+			return 1;
+		} else {
+			printf("Connection lost, reconnection in 5 seconds.\n\f");
+			if (sleep(5) < 0) {
+				debug("WARNING", "Sleep interrupted..");
+				return 1;
+			}
+			mpdinfo_reconnect();
+		}
+	}
+	return 0;
+}
+
+int refresh() {
 	
 	char* out = generateOutputString();
-	printf("%s\f\n", out);
-	fflush(stdout);
-	free(out);
+	if (mpd_connection_get_error(conn) != MPD_ERROR_SUCCESS) {
+		printf("Connection lost, reconnecting.\n\f");
+		if (mpdinfo_reconnect()) {
+			return 1;
+		}
+		refresh();
+	} else {
+		printf("%s\f\n", out);
+		fflush(stdout);
+		free(out);
+	}
+	return 0;
 	
 }
 
@@ -183,9 +211,11 @@ void force_refresh() {
 void* wait_for_action() {
 
 	do {
-		refresh();
-		mpd_run_idle(conn);
-		debug("DEBUG", "refresh");
+		if (!refresh()) {
+			mpd_run_idle(conn);
+			 debug("DEBUG", "refresh");
+
+		}
 	} while (!QUIT);
 	mpd_connection_free(conn);	
 	free_token_structs();
