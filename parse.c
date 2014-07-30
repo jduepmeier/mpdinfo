@@ -5,10 +5,16 @@
 #include "format.h"
 #include "help.h"
 #include "debug.h"
+#include "parse.h"
 
+#include "mpd/status.h"
+#include "status.h"
 
 #define CAT_OUTPUT "[output]"
 #define CAT_GENERAL "[general]"
+#define CAT_TOKEN_DBUPDATE "[token_dbupdate]"
+#define CAT_TOKEN_REPEAT "[token_repeat]"
+#define CAT_TOKEN_RANDOM "[token_random]"
 
 #define CONFIG_HOST "host"
 #define CONFIG_PORT "port"
@@ -16,13 +22,7 @@
 #define CONFIG_PLAY "play"
 #define CONFIG_PAUSE "pause"
 #define CONFIG_STOP "stop"
-
-typedef enum {
-
-	C_GENERAL, C_OUTPUT
-
-} Category;
-
+#define CONFIG_NONE "none"
 
 typedef struct {
 
@@ -31,6 +31,43 @@ typedef struct {
 
 } ConfigLine;
 
+typedef struct {
+
+	char* stop;
+	char* pause;
+	char* play;
+	char* none;
+
+} TokenStruct;
+
+struct {
+
+	TokenStruct random;
+	TokenStruct repeat;
+	TokenStruct dbupdate;
+
+} tokens;
+
+void initTokens() {
+
+	tokens.random = (TokenStruct) { .stop = "[Random]", .pause = "[Random]", .play = "[Random]", .none = ""};
+	tokens.repeat =  (TokenStruct) { .stop = "[Repeat]", .pause = "[Repeat]", .play = "[Repeat]", .none = ""};
+	tokens.dbupdate =  (TokenStruct) { .stop = "[Update]", .pause = "[Update]", .play = "[Update]", .none = ""};
+
+}
+
+/*Tokens* tokens = {
+	{
+		"[Random]", "[Random]", "[Random]", ""
+	},
+	{
+		"[Repeat]", "[Repeat]", "[Repeat]", ""
+	},
+	{
+		"[Update]", "[Update]", "[Update]", ""
+	}
+};*/
+
 struct {
 
 	char* host;
@@ -38,6 +75,51 @@ struct {
 
 } connectionInfo;
 
+char* getNoneToken(int category) {
+
+	switch (category) {
+		case C_TOKEN_REPEAT:
+			return tokens.repeat.none;
+		case C_TOKEN_RANDOM:
+			return tokens.random.none;
+		case C_TOKEN_DBUPDATE:
+			return tokens.dbupdate.none;
+		default:
+			return "";
+	}
+
+}
+
+char* getTokenByStatus(int category) {
+        int status = getStatus();
+	TokenStruct ts;
+
+	switch (category) {
+		case C_TOKEN_REPEAT:
+			ts = tokens.repeat;
+			break;
+		case C_TOKEN_RANDOM:
+			ts = tokens.random;
+			break;
+		case C_TOKEN_DBUPDATE:
+			ts = tokens.dbupdate;
+			break;
+		default:
+			return "";
+	}
+
+        switch (status) {
+
+                case MPD_STATE_PLAY:
+                        return ts.play;
+                case MPD_STATE_PAUSE:
+                        return ts.pause;
+                case MPD_STATE_STOP:
+                        return ts.stop;
+                default:
+                        return ts.none;
+       }
+}
 
 char* cropSpacesAndTabs(char* line) {
 
@@ -61,6 +143,12 @@ Category parseCategory(char* cat) {
 
 	if (!strncmp(cat, CAT_OUTPUT, strlen(CAT_OUTPUT))) {
 		return C_OUTPUT;
+	} else if (!strncmp(cat, CAT_TOKEN_DBUPDATE, strlen(CAT_TOKEN_DBUPDATE))) { 
+		return C_TOKEN_DBUPDATE;
+	} else if (!strncmp(cat, CAT_TOKEN_REPEAT, strlen(CAT_TOKEN_REPEAT))) { 
+		return C_TOKEN_REPEAT;
+	} else if (!strncmp(cat, CAT_TOKEN_RANDOM, strlen(CAT_TOKEN_RANDOM))) { 
+		return C_TOKEN_RANDOM;
 	} else {
 		return C_GENERAL;
 	}
@@ -86,6 +174,27 @@ void setMPDPort(char* port) {
 	if (connectionInfo.port == 0) {
 		debug("WARNING","port not correct, using default port 6600");
 		connectionInfo.port = 6600;
+	}
+}
+
+void parseConfigLineToken(ConfigLine* cl, TokenStruct* tk) {
+	debug("DEBUG tk", tk->play);
+	debug("DEBUG tk", tk->stop);
+	debug("DEBUG cl", cl->value);
+	debug("DEBUG clkey", cl->key);
+	
+	if (!strncmp(cl->key, CONFIG_PLAY, strlen(CONFIG_PLAY))) {
+		tk->play = malloc(strlen(cl->value) +1);
+		strcpy(tk->play, cl->value);
+	} else if (!strncmp(cl->key, CONFIG_PAUSE, strlen(CONFIG_PAUSE))) {
+		tk->pause = malloc(strlen(cl->value) +1);
+		strcpy(tk->pause, cl->value);
+	} else if (!strncmp(cl->key, CONFIG_STOP, strlen(CONFIG_STOP))) {
+		tk->stop = malloc(strlen(cl->value) +1);
+		strcpy(tk->stop, cl->value);
+	} else if (!strncmp(cl->key, CONFIG_NONE, strlen(CONFIG_NONE))) {
+		tk->none = malloc(strlen(cl->value) +1);
+		strcpy(tk->none, cl->value);
 	}
 }
 
@@ -201,6 +310,15 @@ void parseConfigLine(Category cat, char* line) {
 		case C_OUTPUT:
 			parseConfigLineOutput(cl);
 			break;
+		case C_TOKEN_RANDOM:
+			parseConfigLineToken(cl, &tokens.random);
+			break;
+		case C_TOKEN_REPEAT:
+			parseConfigLineToken(cl, &tokens.repeat);
+			break;
+		case C_TOKEN_DBUPDATE:
+			parseConfigLineToken(cl, &tokens.dbupdate);
+			break;
 		default:
 			parseConfigLineGeneral(cl);
 			break;
@@ -251,6 +369,8 @@ void parseConfigFile(char* path) {
 }
 
 void parseArguments(int argc, char* argv[]) {
+
+	initTokens();
 
 	char* mpdhost = getenv("MPDHOST");
 	if (mpdhost == NULL) {

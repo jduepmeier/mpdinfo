@@ -5,6 +5,7 @@
 
 #include "debug.h"
 #include "mpdinfo.h"
+#include "parse.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -41,15 +42,19 @@ int getDBUpdateStatus() {
 }
 
 char* getDBUpdateString() {
+
+	char* token = NULL;
 	int update = getDBUpdateStatus();
+	char* str_update = NULL;
 
 	if (update) {
-		char* str_update = malloc(10);
-		strcpy(str_update, "[U]");
-		return str_update;
+		token = getTokenByStatus(C_TOKEN_DBUPDATE);
 	} else {
-		return "";
+		token = getNoneToken(C_TOKEN_DBUPDATE);
 	}
+	str_update = malloc(strlen(token) + 1);
+	strcpy(str_update, token);
+	return str_update;
 }
 
 int getRepeatStatus() {
@@ -68,20 +73,23 @@ int getRepeatStatus() {
 
 }
 
-
 char* getRepeatString() {
 
+	char* token = NULL;
         int status = getRepeatStatus();
-        if (status < 0) {
-                return "";
-        } else if (status) {
-                char* str_status = malloc(10);
 
-                strcpy(str_status, "[R]");
-                return str_status;
+	char* str_status = NULL;
+
+        if (status) {
+		token = getTokenByStatus(C_TOKEN_REPEAT);
+                str_status = malloc(strlen(token) +1);
+                strcpy(str_status, token);
         } else {
-                return "";
+                token = getNoneToken(C_TOKEN_REPEAT);
         }
+	str_status = malloc(strlen(token) + 1);
+	strcpy(str_status, token);
+	return str_status;
 }
 
 int getStatus() {

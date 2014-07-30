@@ -7,6 +7,7 @@
 #include "debug.h"
 #include "mpdinfo.h"
 #include "status.h"
+#include "parse.h"
 
 #define STR_ARTIST "%artist%"
 #define STR_TITLE "%title%"
