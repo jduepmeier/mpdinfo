@@ -156,10 +156,12 @@ Category parseCategory(char* cat) {
 }
 
 void setMPDHost(char* host) {
+	if (connectionInfo.host) {
+		free(connectionInfo.host);
+	}
 	connectionInfo.host = malloc(strlen(host) + 1);
 	strcpy(connectionInfo.host, host);
 }
-
 char* getMPDHost() {
 	return connectionInfo.host;
 }
@@ -178,10 +180,6 @@ void setMPDPort(char* port) {
 }
 
 void parseConfigLineToken(ConfigLine* cl, TokenStruct* tk) {
-	debug("DEBUG tk", tk->play);
-	debug("DEBUG tk", tk->stop);
-	debug("DEBUG cl", cl->value);
-	debug("DEBUG clkey", cl->key);
 	
 	if (!strncmp(cl->key, CONFIG_PLAY, strlen(CONFIG_PLAY))) {
 		tk->play = malloc(strlen(cl->value) +1);

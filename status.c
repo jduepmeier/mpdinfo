@@ -54,6 +54,7 @@ char* getDBUpdateString() {
 	}
 	str_update = malloc(strlen(token) + 1);
 	strcpy(str_update, token);
+	free(token);
 	return str_update;
 }
 
@@ -82,13 +83,12 @@ char* getRepeatString() {
 
         if (status) {
 		token = getTokenByStatus(C_TOKEN_REPEAT);
-                str_status = malloc(strlen(token) +1);
-                strcpy(str_status, token);
         } else {
                 token = getNoneToken(C_TOKEN_REPEAT);
         }
 	str_status = malloc(strlen(token) + 1);
 	strcpy(str_status, token);
+	free(token);
 	return str_status;
 }
 
