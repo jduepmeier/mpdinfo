@@ -23,24 +23,6 @@ int getStatusStruct(struct mpd_status **mpdstatus) {
         return 1;
 }
 
-int getDBUpdateStatus() {
-
-	struct mpd_status *mpdstatus = NULL;
-
-        if (!getStatusStruct(&mpdstatus)) {
-                return -1;
-        }
-	
-	int update = mpd_status_get_update_id(mpdstatus);
-
-	mpd_status_free(mpdstatus);
-
-	if (update != 0) {
-		return 1;
-	}
-	return 0;
-}
-
 int getStatusByFunc(void* func) {
 
 	struct mpd_status *mpdstatus = NULL;
@@ -56,30 +38,26 @@ int getStatusByFunc(void* func) {
 	return status;
 }
 
+int getDBUpdateStatus() {
 
-int getRandomStatus() {
+	int update = getStatusByFunc(&mpd_status_get_update_id);
 
-	return getStatusByFunc(&mpd_status_get_random);
-
+	if (update != 0) {
+		return 1;
+	}
+	return 0;
 }
 
-
-
+int getRandomStatus() {
+	return getStatusByFunc(&mpd_status_get_random);
+}
 
 int getRepeatStatus() {
-        struct mpd_status *mpdstatus = NULL;
+        return getStatusByFunc(&mpd_status_get_repeat);
+}
 
-        if (!getStatusStruct(&mpdstatus)) {
-                return -1;
-        }
-
-        int repeat = mpd_status_get_repeat(mpdstatus);
-
-        mpd_status_free(mpdstatus);
-
-        return repeat;
-
-
+int getStatus() {
+        return getStatusByFunc(&mpd_status_get_state);
 }
 
 char* getTokenStatusString(int token, int status) {
@@ -106,19 +84,6 @@ char* getRandomString() {
 }
 char* getDBUpdateString() {
 	return getTokenStatusString(C_TOKEN_DBUPDATE, getDBUpdateStatus());
-}
-
-int getStatus() {
-        struct mpd_status *mpdstatus = NULL;
-
-        if (!getStatusStruct(&mpdstatus)) {
-                return -1;
-        }
-        int status = mpd_status_get_state(mpdstatus);
-
-        mpd_status_free(mpdstatus);
-
-        return status;
 }
 
 char* getStatusString() {
