@@ -1,5 +1,6 @@
 #pragma once
 
+void formatControls(char* format, char* output);
 void formatPlay(char* format);
 void formatPause(char* format);
 void formatStop(char* format);

@@ -180,19 +180,23 @@ void setMPDPort(char* port) {
 }
 
 void parseConfigLineToken(ConfigLine* cl, TokenStruct* tk) {
-	
+
+
+	char* output = malloc(strlen(cl->value) +1);
+	formatControls(cl->value, output);
+
 	if (!strncmp(cl->key, CONFIG_PLAY, strlen(CONFIG_PLAY))) {
-		tk->play = malloc(strlen(cl->value) +1);
-		strcpy(tk->play, cl->value);
+		tk->play = output;//malloc(strlen(cl->value) +1);
+		//strcpy(tk->play, cl->value);
 	} else if (!strncmp(cl->key, CONFIG_PAUSE, strlen(CONFIG_PAUSE))) {
-		tk->pause = malloc(strlen(cl->value) +1);
-		strcpy(tk->pause, cl->value);
+		tk->pause = output;//malloc(strlen(cl->value) +1);
+		//strcpy(tk->pause, cl->value);
 	} else if (!strncmp(cl->key, CONFIG_STOP, strlen(CONFIG_STOP))) {
-		tk->stop = malloc(strlen(cl->value) +1);
-		strcpy(tk->stop, cl->value);
+		tk->stop = output;//malloc(strlen(cl->value) +1);
+		//strcpy(tk->stop, cl->value);
 	} else if (!strncmp(cl->key, CONFIG_NONE, strlen(CONFIG_NONE))) {
-		tk->none = malloc(strlen(cl->value) +1);
-		strcpy(tk->none, cl->value);
+		tk->none = output;//malloc(strlen(cl->value) +1);
+		//strcpy(tk->none, cl->value);
 	}
 }
 
