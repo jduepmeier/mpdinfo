@@ -75,6 +75,29 @@ struct {
 
 } connectionInfo;
 
+void deleteQMs(char* input, char* output) {
+
+	int count = 0;
+
+	if (input[0] == '"') {
+		count++;
+	}
+
+	int i = 0;
+	int len = strlen(input);
+	while (count < len - 1) {
+		output[i] = input[count];
+		i++;
+		count++;
+	}
+	if (input[len - 1] != '"') {
+		output[i] = input[len - 1];
+		i++;
+	}
+	output[i] = '\0';
+
+}
+
 char* getNoneToken(int category) {
 
 	switch (category) {
@@ -159,8 +182,12 @@ void setMPDHost(char* host) {
 	if (connectionInfo.host) {
 		free(connectionInfo.host);
 	}
-	connectionInfo.host = malloc(strlen(host) + 1);
-	strcpy(connectionInfo.host, host);
+	char* qm = malloc(strlen(host) + 1);
+	deleteQMs(host, qm);
+	debug("DEBUG qm", qm);
+	connectionInfo.host = malloc(strlen(qm) + 1);
+	strcpy(connectionInfo.host, qm);
+	free(qm);
 }
 char* getMPDHost() {
 	return connectionInfo.host;
@@ -182,37 +209,39 @@ void setMPDPort(char* port) {
 void parseConfigLineToken(ConfigLine* cl, TokenStruct* tk) {
 
 
-	char* output = malloc(strlen(cl->value) +1);
-	formatControls(cl->value, output);
+	char* output2 = malloc(strlen(cl->value) +1);
+	formatControls(cl->value, output2);
+	char* output = malloc(strlen(output2) + 1);
+	deleteQMs(output2,output);
+	free(output2);
 
 	if (!strncmp(cl->key, CONFIG_PLAY, strlen(CONFIG_PLAY))) {
-		tk->play = output;//malloc(strlen(cl->value) +1);
-		//strcpy(tk->play, cl->value);
+		tk->play = output;
 	} else if (!strncmp(cl->key, CONFIG_PAUSE, strlen(CONFIG_PAUSE))) {
-		tk->pause = output;//malloc(strlen(cl->value) +1);
-		//strcpy(tk->pause, cl->value);
+		tk->pause = output;
 	} else if (!strncmp(cl->key, CONFIG_STOP, strlen(CONFIG_STOP))) {
-		tk->stop = output;//malloc(strlen(cl->value) +1);
-		//strcpy(tk->stop, cl->value);
+		tk->stop = output;
 	} else if (!strncmp(cl->key, CONFIG_NONE, strlen(CONFIG_NONE))) {
-		tk->none = output;//malloc(strlen(cl->value) +1);
-		//strcpy(tk->none, cl->value);
+		tk->none = output;
 	}
 }
 
 void parseConfigLineOutput(ConfigLine* cl) {
 	debug("DEBUG", "in output category parsing");
 
+	char* output = malloc(strlen(cl->value) + 1);
+	deleteQMs(cl->value, output);
+
 	if (!strncmp(cl->key, CONFIG_PLAY, strlen(CONFIG_PLAY))) {
-		formatPlay(cl->value);
+		formatPlay(output);
 		return;
 	}
 	if (!strncmp(cl->key, CONFIG_PAUSE, strlen(CONFIG_PAUSE))) {
-		formatPause(cl->value);
+		formatPause(output);
 		return;
 	}
 	if (!strncmp(cl->key, CONFIG_STOP, strlen(CONFIG_STOP))) {
-		formatStop(cl->value);
+		formatStop(output);
 		return;
 	}
 }
