@@ -12,3 +12,5 @@ int getVolume();
 char* getVolumeString();
 int getDBUpdateStatus();
 char* getDBUpdateString();
+int getRandomStatus();
+char* getRandomString();

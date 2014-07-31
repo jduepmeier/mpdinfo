@@ -41,22 +41,30 @@ int getDBUpdateStatus() {
 	return 0;
 }
 
-char* getDBUpdateString() {
+int getStatusByFunc(void* func) {
 
-	char* token = NULL;
-	int update = getDBUpdateStatus();
-	char* str_update = NULL;
+	struct mpd_status *mpdstatus = NULL;
 
-	if (update) {
-		token = getTokenByStatus(C_TOKEN_DBUPDATE);
-	} else {
-		token = getNoneToken(C_TOKEN_DBUPDATE);
+	if (!getStatusStruct(&mpdstatus)) {
+		return -1;
 	}
-	str_update = malloc(strlen(token) + 1);
-	strcpy(str_update, token);
-	free(token);
-	return str_update;
+	int (*f)() = func;
+	int status = f(mpdstatus);
+
+	mpd_status_free(mpdstatus);
+
+	return status;
 }
+
+
+int getRandomStatus() {
+
+	return getStatusByFunc(&mpd_status_get_random);
+
+}
+
+
+
 
 int getRepeatStatus() {
         struct mpd_status *mpdstatus = NULL;
@@ -74,22 +82,30 @@ int getRepeatStatus() {
 
 }
 
-char* getRepeatString() {
+char* getTokenStatusString(int token, int status) {
 
-	char* token = NULL;
-        int status = getRepeatStatus();
+	char* output = NULL;
+	
+	if (status) {
+		output = getTokenByStatus(token);
+	} else {
+		output = getNoneToken(token);
+	}
 
-	char* str_status = NULL;
-
-        if (status) {
-		token = getTokenByStatus(C_TOKEN_REPEAT);
-        } else {
-                token = getNoneToken(C_TOKEN_REPEAT);
-        }
-	str_status = malloc(strlen(token) + 1);
-	strcpy(str_status, token);
-	free(token);
+	char* str_status = malloc(strlen(output) + 1);
+	strcpy(str_status, output);
 	return str_status;
+}
+
+char* getRepeatString() {
+	return getTokenStatusString(C_TOKEN_REPEAT, getRepeatStatus());
+}
+
+char* getRandomString() {
+	return getTokenStatusString(C_TOKEN_RANDOM, getRandomStatus());
+}
+char* getDBUpdateString() {
+	return getTokenStatusString(C_TOKEN_DBUPDATE, getDBUpdateStatus());
 }
 
 int getStatus() {

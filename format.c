@@ -15,13 +15,14 @@
 #define STR_STATUS "%status%"
 #define STR_REPEAT "%repeat%"
 #define STR_DBUPDATE "%dbupdate%"
+#define STR_RANDOM "%random%"
 
 char* formatString  = "Current Track (Vol %volume%%):\n -%status%-\n %artist% - %title%";
 char* formatStoppedString = "-stopped-";
 
 typedef enum {
 
-	TOKEN_ARTIST, TOKEN_TITLE, TOKEN_STATUS, TOKEN_VOLUME, TOKEN_REPEAT, TOKEN_DBUPDATE, TOKEN_TEXT 
+	TOKEN_ARTIST, TOKEN_TITLE, TOKEN_STATUS, TOKEN_VOLUME, TOKEN_REPEAT, TOKEN_DBUPDATE, TOKEN_RANDOM, TOKEN_TEXT 
 
 } TOKEN_TYPE;
 
@@ -57,8 +58,11 @@ char* getTokenStr(char* str) {
 		return STR_REPEAT;
 	}
 	if (strncmp(str, STR_DBUPDATE, strlen(STR_DBUPDATE)) == 0) {
-                return STR_DBUPDATE;
-        }
+		return STR_DBUPDATE;
+	}
+	if (strncmp(str, STR_RANDOM, strlen(STR_RANDOM)) == 0) {
+		return STR_RANDOM;
+	}
 	return "";
 }
 
@@ -84,6 +88,9 @@ TOKEN_TYPE getTokenEnum(char* str) {
 	if (strncmp(str, STR_DBUPDATE, strlen(STR_DBUPDATE)) == 0) {
                 return TOKEN_DBUPDATE;
         }
+	if (strncmp(str, STR_RANDOM, strlen(STR_RANDOM)) == 0) {
+                return TOKEN_RANDOM;
+        }
 	return -1;
 }
 
@@ -103,6 +110,8 @@ void* getTokenAction(TOKEN_TYPE type) {
 			return &getStatusString;
 		case TOKEN_DBUPDATE:
 			return &getDBUpdateString;
+		case TOKEN_RANDOM:
+			return &getRandomString;
 		default:
 			return NULL;
 	}
