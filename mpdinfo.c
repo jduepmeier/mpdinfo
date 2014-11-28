@@ -114,7 +114,7 @@ void* wait_for_action() {
 	mpd_connection_free(conn);	
 	free_token_structs();
 	free_connection_info();
-
+	free_tokens();
 	return 0;
 }
 
@@ -132,6 +132,10 @@ int main(int argc, char** argv) {
 	int value = mpdinfo_connect(&conn);
 
 	if (value < 0) {
+
+		free_token_structs();
+		free_connection_info();
+		free_tokens();
 		return -1;
 	}
 
@@ -141,6 +145,7 @@ int main(int argc, char** argv) {
 
 	signal(SIGHUP, force_refresh);
 	signal(SIGQUIT, quit);
+	signal(SIGTERM, quit);
 
 	pthread_join(pid, NULL);
 

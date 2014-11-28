@@ -315,6 +315,7 @@ void free_token_struct(FormatToken** token) {
 	while (token[t]) {
 
 		if (token[t]->type == TOKEN_TEXT) {
+			debug("FREE", token[t]->data);
 			free(token[t]->data);
 		}
 

@@ -48,25 +48,29 @@ struct {
 
 } tokens;
 
-void initTokens() {
-
-	tokens.random = (TokenStruct) { .stop = "[Random]", .pause = "[Random]", .play = "[Random]", .none = ""};
-	tokens.repeat =  (TokenStruct) { .stop = "[Repeat]", .pause = "[Repeat]", .play = "[Repeat]", .none = ""};
-	tokens.dbupdate =  (TokenStruct) { .stop = "[Update]", .pause = "[Update]", .play = "[Update]", .none = ""};
-
+void fillToken(TokenStruct* token, char* none, char* rest) {
+	
+	token->stop = malloc(strlen(rest) + 1);
+	token->pause = malloc(strlen(rest) + 1);
+	token->play = malloc(strlen(rest) + 1);
+	token->none = malloc(strlen(none) + 1);
+	
+	strcpy (token->stop, rest);
+	strcpy (token->pause, rest);
+	strcpy (token->play, rest);
+	strcpy (token->none, none);
 }
 
-/*Tokens* tokens = {
-	{
-		"[Random]", "[Random]", "[Random]", ""
-	},
-	{
-		"[Repeat]", "[Repeat]", "[Repeat]", ""
-	},
-	{
-		"[Update]", "[Update]", "[Update]", ""
-	}
-};*/
+void initTokens() {
+
+	//tokens.random = //(TokenStruct) { .stop = "[Random]", .pause = "[Random]", .play = "[Random]", .none = ""};
+	//tokens.repeat = malloc(sizeof(TokenStruct));// (TokenStruct) { .stop = "[Repeat]", .pause = "[Repeat]", .play = "[Repeat]", .none = ""};
+	//tokens.dbupdate = malloc(sizeof(TokenStruct));// (TokenStruct) { .stop = "[Update]", .pause = "[Update]", .play = "[Update]", .none = ""};
+
+	fillToken(&tokens.random, "", "[Random]");
+	fillToken(&tokens.repeat, "", "[Repeat]");
+	fillToken(&tokens.dbupdate, "", "[Update]");
+}
 
 struct {
 
@@ -74,6 +78,21 @@ struct {
 	unsigned long int port;
 
 } connectionInfo;
+
+void free_token(TokenStruct* token) {
+	free(token->stop);
+	free(token->pause);
+	free(token->play);
+	free(token->none);
+
+//	free(token);
+}
+
+void free_tokens() {
+	free_token(&tokens.random);
+	free_token(&tokens.repeat);
+	free_token(&tokens.dbupdate);
+}
 
 void deleteQMs(char* input, char* output) {
 
@@ -146,7 +165,7 @@ char* getTokenByStatus(int category) {
 
 char* cropSpacesAndTabs(char* line) {
 
-	while (line[0] != '\n') {
+	while (line[0] != '\n' && line[0] != '\0') {
 
 		if (line[0] != '\t' && line[0] != ' ') {
 			return line;
@@ -185,9 +204,7 @@ void setMPDHost(char* host) {
 	char* qm = malloc(strlen(host) + 1);
 	deleteQMs(host, qm);
 	debug("DEBUG qm", qm);
-	connectionInfo.host = malloc(strlen(qm) + 1);
-	strcpy(connectionInfo.host, qm);
-	free(qm);
+	connectionInfo.host = qm;
 }
 char* getMPDHost() {
 	return connectionInfo.host;
@@ -216,12 +233,16 @@ void parseConfigLineToken(ConfigLine* cl, TokenStruct* tk) {
 	free(output2);
 
 	if (!strncmp(cl->key, CONFIG_PLAY, strlen(CONFIG_PLAY))) {
+		free(tk->play);
 		tk->play = output;
 	} else if (!strncmp(cl->key, CONFIG_PAUSE, strlen(CONFIG_PAUSE))) {
+		free(tk->pause);
 		tk->pause = output;
 	} else if (!strncmp(cl->key, CONFIG_STOP, strlen(CONFIG_STOP))) {
+		free(tk->stop);
 		tk->stop = output;
 	} else if (!strncmp(cl->key, CONFIG_NONE, strlen(CONFIG_NONE))) {
+		free(tk->none);
 		tk->none = output;
 	}
 }
@@ -234,16 +255,13 @@ void parseConfigLineOutput(ConfigLine* cl) {
 
 	if (!strncmp(cl->key, CONFIG_PLAY, strlen(CONFIG_PLAY))) {
 		formatPlay(output);
-		return;
-	}
-	if (!strncmp(cl->key, CONFIG_PAUSE, strlen(CONFIG_PAUSE))) {
+	} else if (!strncmp(cl->key, CONFIG_PAUSE, strlen(CONFIG_PAUSE))) {
 		formatPause(output);
-		return;
-	}
-	if (!strncmp(cl->key, CONFIG_STOP, strlen(CONFIG_STOP))) {
+	} else if (!strncmp(cl->key, CONFIG_STOP, strlen(CONFIG_STOP))) {
 		formatStop(output);
-		return;
 	}
+
+	free(output);
 }
 
 void parseConfigLineGeneral(ConfigLine* cl) {
@@ -380,6 +398,7 @@ void parseConfigFile(char* path) {
 	Category category = C_GENERAL;
 
 	while ( (read = getline(&line, &len, file)) != -1) {
+		char* free_line = line;
 		debug("DEBUG", line);
 		
 		line = cropSpacesAndTabs(line);
@@ -392,9 +411,16 @@ void parseConfigFile(char* path) {
 				parseConfigLine(category, line);
 			}
 		}
+		free(free_line);
+		line = NULL;
+		len = 0;
 
 	}
-	free(line);
+
+	if (line != NULL) {
+		free(line);
+	}
+
 	fclose(file);
 
 }
@@ -407,9 +433,9 @@ void parseArguments(int argc, char* argv[]) {
 	if (mpdhost == NULL) {
 		debug("DEBUG", "host is not set over env");
 		mpdhost = "localhost";
-	}
+	} 
+	
 	setMPDHost(mpdhost);
-
 	char* mpdport = getenv("MPDPORT");
 
 	if (mpdport != NULL) {

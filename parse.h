@@ -5,6 +5,7 @@ typedef enum {
         C_GENERAL, C_OUTPUT, C_TOKEN_DBUPDATE, C_TOKEN_REPEAT, C_TOKEN_RANDOM
 
 } Category;
+void free_tokens();
 void freeMPDHost();
 char* getNoneToken(int category);
 char* getTokenByStatus(int category);
