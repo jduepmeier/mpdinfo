@@ -89,7 +89,7 @@ int refresh() {
 		}
 		refresh();
 	} else {
-		printf("%s\f\n", out);
+		printf("\f%s", out);
 		fflush(stdout);
 		free(out);
 	}
