@@ -87,6 +87,7 @@ int refresh() {
 		if (mpdinfo_reconnect()) {
 			return 1;
 		}
+		free(out);
 		refresh();
 	} else {
 		printf("\f%s", out);

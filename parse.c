@@ -291,7 +291,7 @@ char* cropSpacesAndTabsB(char* s) {
 char* strncpyN(char* dest, char* src, int size) {
 	
 	if (strlen(src) < size) {
-		dest = malloc(strlen(src));
+		dest = malloc(strlen(src) + 1);
 		strcpy(dest, src);
 		return dest;
 	}
