@@ -225,25 +225,29 @@ void setMPDPort(char* port) {
 
 void parseConfigLineToken(ConfigLine* cl, TokenStruct* tk) {
 
-
-	char* output2 = malloc(strlen(cl->value) +1);
+	char output2[strlen(cl->value) +1];
+	memset(output2, 0, strlen(cl->value + 1));
 	formatControls(cl->value, output2);
-	char* output = malloc(strlen(output2) + 1);
+	char output[strlen(output2) + 1];
+	memset(output, 0, strlen(output2) + 1);
 	deleteQMs(output2,output);
-	free(output2);
 
 	if (!strncmp(cl->key, CONFIG_PLAY, strlen(CONFIG_PLAY))) {
 		free(tk->play);
-		tk->play = output;
+		tk->play = malloc(strlen(output) + 1);
+		strcpy(tk->play,output);
 	} else if (!strncmp(cl->key, CONFIG_PAUSE, strlen(CONFIG_PAUSE))) {
 		free(tk->pause);
-		tk->pause = output;
+		tk->pause = malloc(strlen(output) + 1);
+		strcpy(tk->pause,output);
 	} else if (!strncmp(cl->key, CONFIG_STOP, strlen(CONFIG_STOP))) {
 		free(tk->stop);
-		tk->stop = output;
+		tk->stop = malloc(strlen(output) + 1);
+		strcpy(tk->stop,output);
 	} else if (!strncmp(cl->key, CONFIG_NONE, strlen(CONFIG_NONE))) {
 		free(tk->none);
-		tk->none = output;
+		tk->none = malloc(strlen(output) + 1);
+		strcpy(tk->none,output);
 	}
 }
 
