@@ -69,7 +69,7 @@ int mpdinfo_reconnect() {
 			return 1;
 		} else {
 			printf("Connection lost, reconnection in 5 seconds.\n\f");
-			if (sleep(5) < 0) {
+			if (sleep(5) > 0) {
 				debug("WARNING", "Sleep interrupted..");
 				return 1;
 			}
