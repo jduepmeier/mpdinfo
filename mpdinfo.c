@@ -84,10 +84,10 @@ int refresh() {
 	char* out = generateOutputString();
 	if (mpd_connection_get_error(conn) != MPD_ERROR_SUCCESS) {
 		printf("Connection lost, reconnecting.\n\f");
+		free(out);
 		if (mpdinfo_reconnect()) {
 			return 1;
 		}
-		free(out);
 		refresh();
 	} else {
 		printf("\f%s", out);
