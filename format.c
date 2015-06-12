@@ -186,7 +186,7 @@ char* generateOutputString() {
 	debug("VERBOSE", "begin output string generation");
 
 	int t = 0;
-
+	int test = 0;
 	char* output = malloc(1);
 	output[0] = '\0';
 
@@ -198,16 +198,24 @@ char* generateOutputString() {
 			
 			char* (*p)() = tokens[t]->data;
 			args = p();
+
+			if (strlen(args) == 0) {
+				test = 1;
+			}
 		} else {
+			test = 1;
 			args = malloc(strlen((char*) tokens[t]->data) + 1);
 			strcpy(args, tokens[t]->data);
 		}
+
 		debug("DEBUG", args);
 		next = malloc(strlen(output) + strlen(args) + 1);
 		sprintf(next, "%s%s", output, args);
-		if (strcmp(args, "") != 0) {
+		
+		if (test) {
 			free(args);
 		}
+
 		free(output);
 		output = next;
 		t++;
