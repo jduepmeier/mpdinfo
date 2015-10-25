@@ -7,7 +7,9 @@
 #include "debug.h"
 #include "mpdinfo.h"
 #include "status.h"
-#include "parse.h"
+//#include "parse.h"
+
+#include "libs/logger.h"
 
 #define STR_ARTIST "%artist%"
 #define STR_TITLE "%title%"
@@ -17,50 +19,23 @@
 #define STR_DBUPDATE "%dbupdate%"
 #define STR_RANDOM "%random%"
 
-char* formatString  = "Current Track (Vol %volume%%):\n -%status%-\n %artist% - %title%";
-char* formatStoppedString = "-stopped-";
-
-typedef enum {
-
-	TOKEN_ARTIST, TOKEN_TITLE, TOKEN_STATUS, TOKEN_VOLUME, TOKEN_REPEAT, TOKEN_DBUPDATE, TOKEN_RANDOM, TOKEN_TEXT 
-
-} TOKEN_TYPE;
-
-typedef struct {
-
-	TOKEN_TYPE type;
-	void* data;
-
-} FormatToken;
-
-struct {
-	FormatToken** ppTokens;
-	FormatToken** stopTokens;
-	FormatToken** pauseTokens;
-} tokenStruct;
+#define DEFAULT_FORMAT_STRING "Current Track (Vol %volume%%):\n -%status%-\n %artist% - %title%"
+#define DEFAULT_STOPPED_STRING "-stopped-"
 
 char* getTokenStr(char* str) {
-	if (strncmp(str, STR_ARTIST,strlen(STR_ARTIST)) == 0) {
+	if (!strncmp(str, STR_ARTIST, strlen(STR_ARTIST))) {
 		return STR_ARTIST;
-	}
-
-	if (strncmp(str, STR_TITLE, strlen(STR_TITLE)) == 0) {
+	} else if (!strncmp(str, STR_TITLE, strlen(STR_TITLE))) {
 		return STR_TITLE;
-	}
-	if (strncmp(str, STR_VOLUME, strlen(STR_VOLUME)) == 0) {
+	} else if (!strncmp(str, STR_VOLUME, strlen(STR_VOLUME))) {
 		return STR_VOLUME;
-	}
-
-	if (strncmp(str, STR_STATUS, strlen(STR_STATUS)) == 0) {
+	} else if (!strncmp(str, STR_STATUS, strlen(STR_STATUS))) {
 		return STR_STATUS;
-	}
-	if (strncmp(str, STR_REPEAT, strlen(STR_REPEAT)) == 0) {
+	} else if (!strncmp(str, STR_REPEAT, strlen(STR_REPEAT))) {
 		return STR_REPEAT;
-	}
-	if (strncmp(str, STR_DBUPDATE, strlen(STR_DBUPDATE)) == 0) {
+	} else if (!strncmp(str, STR_DBUPDATE, strlen(STR_DBUPDATE))) {
 		return STR_DBUPDATE;
-	}
-	if (strncmp(str, STR_RANDOM, strlen(STR_RANDOM)) == 0) {
+	} else if (!strncmp(str, STR_RANDOM, strlen(STR_RANDOM))) {
 		return STR_RANDOM;
 	}
 	return "";
@@ -68,30 +43,24 @@ char* getTokenStr(char* str) {
 
 	
 TOKEN_TYPE getTokenEnum(char* str) {
-	if (strncmp(str, STR_ARTIST,strlen(STR_ARTIST)) == 0) {
-		return TOKEN_ARTIST;
-	}
-
-	if (strncmp(str, STR_TITLE, strlen(STR_TITLE)) == 0) {
-		return TOKEN_TITLE;
-	}
-	if (strncmp(str, STR_VOLUME, strlen(STR_VOLUME)) == 0) {
-		return TOKEN_VOLUME;
-	}
-
-	if (strncmp(str, STR_STATUS, strlen(STR_STATUS)) == 0) {
-		return TOKEN_STATUS;
-	}
-	if (strncmp(str, STR_REPEAT, strlen(STR_REPEAT)) == 0) {
-		return TOKEN_REPEAT;
-	}
-	if (strncmp(str, STR_DBUPDATE, strlen(STR_DBUPDATE)) == 0) {
-                return TOKEN_DBUPDATE;
+	TOKEN_TYPE type = TOKEN_UNKOWN;
+	
+	if (!strncmp(str, STR_ARTIST, strlen(STR_ARTIST))) {
+		type = TOKEN_ARTIST;
+	} else if (!strncmp(str, STR_TITLE, strlen(STR_TITLE))) {
+		type = TOKEN_TITLE;
+	} else if (!strncmp(str, STR_VOLUME, strlen(STR_VOLUME))) {
+		type = TOKEN_VOLUME;
+	} else if (!strncmp(str, STR_STATUS, strlen(STR_STATUS))) {
+		type = TOKEN_STATUS;
+	} else if (!strncmp(str, STR_REPEAT, strlen(STR_REPEAT))) {
+		type = TOKEN_REPEAT;
+	} else if (!strncmp(str, STR_DBUPDATE, strlen(STR_DBUPDATE))) {
+                type = TOKEN_DBUPDATE;
+        } else if (strncmp(str, STR_RANDOM, strlen(STR_RANDOM))) {
+                type = TOKEN_RANDOM;
         }
-	if (strncmp(str, STR_RANDOM, strlen(STR_RANDOM)) == 0) {
-                return TOKEN_RANDOM;
-        }
-	return -1;
+	return type;
 }
 
 void* getTokenAction(TOKEN_TYPE type) {
@@ -117,7 +86,7 @@ void* getTokenAction(TOKEN_TYPE type) {
 	}
 }
 
-void formatControls(char* format, char* output) {
+void formatControls(const char* format, char* output) {
 	
 	int i = 0;
 	int j = 0;
@@ -160,120 +129,131 @@ void formatControls(char* format, char* output) {
 	output[j] = '\0';
 }
 
-char* generateOutputString() {
+char* generateOutputString(LOGGER log, Config* config, struct mpd_connection* conn) {
 
-	FormatToken** tokens = NULL;
+	FormatToken* token = NULL;
+	int status = getStatus(log, conn);
 
-	switch (getStatus()) {
+	switch (status) {
 		case MPD_STATE_STOP:
-			tokens = tokenStruct.stopTokens;
+			token = config->stop;
 			break;
 		case MPD_STATE_PAUSE:
-			if (tokenStruct.pauseTokens) {
-				tokens = tokenStruct.pauseTokens;
-			} else {
-				tokens = tokenStruct.ppTokens;
-			}
+			token = config->pause;
 			break;
 		case MPD_STATE_PLAY:
-			tokens = tokenStruct.ppTokens;
+			token = config->play;
 			break;
 		default:
-			tokens = tokenStruct.ppTokens;
+			logprintf(log, LOG_WARNING, "Unkown playback status. Use default output format.\n");
+			token = config->none;
 			break;
 	}
 
-	debug("VERBOSE", "begin output string generation");
+	logprintf(log, LOG_DEBUG, "begin output string generation\n");
 
-	int t = 0;
-	int test = 0;
 	char* output = malloc(1);
-	output[0] = '\0';
+	output[0] = 0;
 
-	while(tokens[t]) {
+	while(token) {
 
 		char* next;
 		char* args;
-		if (tokens[t]->type != TOKEN_TEXT) {
+		
+		// text token have the string in the data section. The others have a function in data section.
+		if (token->type != TOKEN_TEXT) {
 			
-			char* (*p)() = tokens[t]->data;
-			args = p();
+			char* (*p)(LOGGER log, struct mpd_connection* conn, int status, Config* config) = token->data;
+			args = p(log, conn, status, config);
 
-			if (strlen(args) == 0) {
-				test = 1;
-			}
 		} else {
-			test = 1;
-			args = malloc(strlen((char*) tokens[t]->data) + 1);
-			strcpy(args, tokens[t]->data);
+			args = malloc(strlen((char*) token->data) + 1);
+			strcpy(args, token->data);
 		}
 
-		debug("DEBUG", args);
+		logprintf(log, LOG_DEBUG, "%s\n", args);
 		next = malloc(strlen(output) + strlen(args) + 1);
 		sprintf(next, "%s%s", output, args);
 		
-		if (test) {
-			free(args);
-		}
+		free(args);
 
 		free(output);
 		output = next;
-		t++;
+		token = token->next;
 	}
 
 	return output;
 }
 
-FormatToken** buildTokenStructure(char* f) {
 
-	char* format = malloc(strlen(f) + 1);
-	formatControls(f, format);
+FormatToken* buildToken(LOGGER log, TOKEN_TYPE type, void* data) {
+	FormatToken* token = malloc(sizeof(FormatToken));
 
-	FormatToken** tokens = NULL;
+	token->data = data;
+	token->type = type;
+	token->next = NULL;
 
-	debug("DEBUG","in buildTokenStructure");
+	return token;
+}
+
+FormatToken* buildTokenStructure(LOGGER log, const char* input) {
+
+	logprintf(log, LOG_DEBUG, "build token structure from:%s\n", input);
+
+	char format[strlen(input) + 1];
+	formatControls(input, format);
+
+	FormatToken* tokens = NULL;
+	FormatToken* next = NULL;
+
 	int i = 0;
-	int t = 0;
 
 	char* current = format;
+	char* tmp;
+	char* tokenstr;
+	FORMAT_TYPE type;
 
-	tokens = realloc(tokens, (t + 1) * sizeof(FormatToken*));
-	tokens[t] = NULL;
 	int len = strlen(format);
 
 	// for every char
 	while (i < len) {
 		// delimiter for tokens
 		if (format[i] == '%') {
-			char* tokenstr = getTokenStr(format + i);
+			tokenstr = getTokenStr(format + i);
+			logprintf(log, LOG_DEBUG, "Found token: %s\n", tokenstr);
 
 			if (strlen(tokenstr) > 0 ) {
 				// check for text token
 				if (current != (format + i)) {
-					debug("DEBUG", "find TextToken");
-					tokens = realloc(tokens, (t + 2) * sizeof(FormatToken*));
-					tokens[t] = malloc(sizeof(FormatToken));
 
-					tokens[t]->type = TOKEN_TEXT;
 					int length = strlen(current) - strlen(format + i);
-					tokens[t]->data = malloc(length + 1);
-					strncpy(tokens[t]->data, current, length);
-					((char*)tokens[t]->data)[length] = '\0';
+					tmp = malloc(length + 1);
+					memset(tmp, sizeof(tmp), 0);
+					strncpy(tmp, current, length);
+					tmp[length] = '\0';
 					current = (format + i);
-					debug("DEBUG",tokens[t]->data);
-					t++;
-					tokens[t] = NULL;
+					
+					logprintf(log, LOG_DEBUG, "found next text token: %s\n", tmp);
+
+					if (!tokens) {
+						tokens = buildToken(log, TOKEN_TEXT, tmp);
+						next = tokens;
+					} else {
+						next->next = buildToken(log, TOKEN_TEXT, tmp);
+						next = next->next;
+					}
 				}
 				
-				tokens = realloc(tokens,(t + 2) * sizeof(FormatToken*));
-				tokens[t] = malloc(sizeof(FormatToken));
+				type = getTokenEnum(tokenstr);
 
-				tokens[t]->type = getTokenEnum(tokenstr);
-				tokens[t]->data = getTokenAction(tokens[t]->type);
+				if (!tokens) {
+					tokens = buildToken(log, type, getTokenAction(type));
+					next = tokens;
+				} else {
+					next->next = buildToken(log, type, getTokenAction(type));
+					next = next->next;
+				}
 
-				t++;
-				tokens[t] = NULL; 
-				
 				// increment counter with size of tokenstr
 				i += strlen(tokenstr);
 				current = format + i;
@@ -286,72 +266,97 @@ FormatToken** buildTokenStructure(char* f) {
 	}
 
 	if (current != (format + i)) {
-		debug("DEBUG", "Last TextToken");
+		logprintf(log, LOG_DEBUG, "Last TextToken\n");
 
-		tokens = realloc(tokens, (t + 2) * sizeof(FormatToken*));
-		tokens[t] = malloc(sizeof(FormatToken));
-
-		tokens[t]->type = TOKEN_TEXT;
 		int length = strlen(current) - strlen(format + i);
-		tokens[t]->data = malloc(length + 1);
-		strcpy(tokens[t]->data, current);
-		debug("DEBUG", tokens[t]->data);
-		t++;
-		tokens[t] = NULL;
+		tmp = malloc(length + 1);
+		strcpy(tmp, current);
+		logprintf(log, LOG_DEBUG, "%s\n", tmp);
+
+		if (!tokens) {
+			tokens = buildToken(log, TOKEN_TEXT, tmp);
+		} else {
+			next->next = buildToken(log, TOKEN_TEXT, tmp);
+		}
 
 	}
-	free(format);
 	return tokens;
 
 }
 
 void checkFormat() {
 
-	if (!tokenStruct.stopTokens) {
-		tokenStruct.stopTokens = buildTokenStructure(formatStoppedString);	
-	}
-	if (!tokenStruct.ppTokens) {
-		tokenStruct.ppTokens = buildTokenStructure(formatString);
-	}
-
-
 }
 
-void free_token_struct(FormatToken** token) {
-	int t = 0;
+void freeTokenStruct(LOGGER log, FormatToken* token) {
 
-	while (token[t]) {
+	if (!token) {
+		return;
+	}
+	freeTokenStruct(log, token->next);
 
-		if (token[t]->type == TOKEN_TEXT) {
-			debug("FREE", token[t]->data);
-			free(token[t]->data);
-		}
+	if (!token->type) {
+		logprintf(log, LOG_WARNING, "Type is not set. This should not be happen.\n");
+		free(token);
+		return;
+	}
 
-		free(token[t]);
-		t++;
+	if (token->type == TOKEN_TEXT) {
+		logprintf(log, LOG_DEBUG,  "FREE %s\n", token->data);
+		free(token->data);
 	}
 	free(token);
 }
 
-void free_token_structs() {
-	free_token_struct(tokenStruct.ppTokens);
-	free_token_struct(tokenStruct.stopTokens);
-	if (tokenStruct.pauseTokens) {
-		free_token_struct(tokenStruct.pauseTokens);
+void freeTokenStructs(LOGGER log, Config* config) {
+	freeTokenStruct(log, config->play);
+	freeTokenStruct(log, config->pause);
+	freeTokenStruct(log, config->stop);
+	freeTokenStruct(log, config->none);
+}
+
+void freeTokenConfigItem(TokenConfigItem* item) {
+	if (!item) {
+		return;
+	}
+
+	if (item->play) {
+		free(item->play);
+	}
+	if (item->pause) {
+		free(item->pause);
+	}
+	if (item->stop) {
+		free(item->stop);
+	}
+	if (item->none) {
+		free(item->none);
+	}
+	if (item->off) {
+		free(item->off);
 	}
 }
 
+void freeTokenConfig(TokenConfig* config) {
+
+	if (!config) {
+		return;
+	}
+
+	freeTokenConfigItem(config->repeat);
+	freeTokenConfigItem(config->random);
+	freeTokenConfigItem(config->dbupdate);
+
+}
 
 void formatPlay(char* format) {
-
-	tokenStruct.ppTokens = buildTokenStructure(format);
+	printf("formatPlay is deprecated.\n");
 }
 
 void formatStop(char* format) {
-
-	tokenStruct.stopTokens = buildTokenStructure(format);
+	printf("formatStop is deprecated.\n");
 }
 
 void formatPause(char* format) {
-	tokenStruct.pauseTokens = buildTokenStructure(format);
+	printf("formatPause is deprecated.\n");
 }

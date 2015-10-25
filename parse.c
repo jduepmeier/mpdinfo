@@ -1,14 +1,18 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <unistd.h>
+
 
 #include "format.h"
 #include "help.h"
 #include "debug.h"
 #include "parse.h"
+#include "libs/logger.h"
 
 #include "mpd/status.h"
 #include "status.h"
+#include "mpdinfo.h"
 
 #define CAT_OUTPUT "[output]"
 #define CAT_GENERAL "[general]"
@@ -23,6 +27,7 @@
 #define CONFIG_PAUSE "pause"
 #define CONFIG_STOP "stop"
 #define CONFIG_NONE "none"
+#define CONFIG_LOGFILE "logfile"
 
 typedef struct {
 
@@ -72,13 +77,6 @@ void initTokens() {
 	fillToken(&tokens.dbupdate, "", "[Update]");
 }
 
-struct {
-
-	char* host;
-	unsigned long int port;
-
-} connectionInfo;
-
 void free_token(TokenStruct* token) {
 	free(token->stop);
 	free(token->pause);
@@ -92,6 +90,19 @@ void free_tokens() {
 	free_token(&tokens.random);
 	free_token(&tokens.repeat);
 	free_token(&tokens.dbupdate);
+}
+
+char* cropSpacesAndTabs(char* line) {
+
+	while (line[0] != '\n' && line[0] != '\0') {
+
+		if (line[0] != '\t' && line[0] != ' ') {
+			return line;
+		} else {
+			line++;
+		}
+	}
+	return line;
 }
 
 void deleteQMs(char* input, char* output) {
@@ -163,67 +174,66 @@ char* getTokenByStatus(int category) {
        }
 }
 
-char* cropSpacesAndTabs(char* line) {
 
-	while (line[0] != '\n' && line[0] != '\0') {
 
-		if (line[0] != '\t' && line[0] != ' ') {
-			return line;
-		} else {
-			line++;
-		}
-	}
-	return line;
-}
-
-void free_connection_info() {
-
-	free(connectionInfo.host);
-}
-
-Category parseCategory(char* cat) {
+Category parseCategory(LOGGER log, Config* config, char* cat) {
 
 	if (!strncmp(cat, CAT_OUTPUT, strlen(CAT_OUTPUT))) {
+		logprintf(log, LOG_DEBUG, "Entering output category.\n");
 		return C_OUTPUT;
 	} else if (!strncmp(cat, CAT_TOKEN_DBUPDATE, strlen(CAT_TOKEN_DBUPDATE))) { 
+		logprintf(log, LOG_DEBUG, "Entering dbupdate category.\n");
 		return C_TOKEN_DBUPDATE;
-	} else if (!strncmp(cat, CAT_TOKEN_REPEAT, strlen(CAT_TOKEN_REPEAT))) { 
+	} else if (!strncmp(cat, CAT_TOKEN_REPEAT, strlen(CAT_TOKEN_REPEAT))) {
+		logprintf(log, LOG_DEBUG, "Entering repeat category.\n");
 		return C_TOKEN_REPEAT;
 	} else if (!strncmp(cat, CAT_TOKEN_RANDOM, strlen(CAT_TOKEN_RANDOM))) { 
+		logprintf(log, LOG_DEBUG, "Entering random category.\n");
 		return C_TOKEN_RANDOM;
 	} else {
+		logprintf(log, LOG_WARNING, "Category is general or not matched. Switching to general.\n");
 		return C_GENERAL;
 	}
 
 }
 
-void setMPDHost(char* host) {
-	if (connectionInfo.host) {
-		free(connectionInfo.host);
+void setLogFile(LOGGER log, Config* config, char* logFile) {
+
+	if (log.stream != stderr) {
+		fclose(log.stream);
+	}
+	logprintf(log, LOG_DEBUG, "Switching logging to file (%s)\n", logFile);
+	log.stream = fopen(logFile, "w");
+
+}
+
+void setMPDHost(LOGGER log, Config* config, char* host) {
+	if (config->connectionInfo->host) {
+		free(config->connectionInfo->host);
 	}
 	char* qm = malloc(strlen(host) + 1);
 	deleteQMs(host, qm);
-	debug("DEBUG qm", qm);
-	connectionInfo.host = qm;
+	logprintf(log, LOG_DEBUG, "Switching to host '%s'\n", qm);
+	config->connectionInfo->host = qm;
 }
-char* getMPDHost() {
-	return connectionInfo.host;
-}
-
-unsigned long int getMPDPort() {
-	return connectionInfo.port;
+char* getMPDHost(Config* config) {
+	return config->connectionInfo->host;
 }
 
-void setMPDPort(char* port) {
-	connectionInfo.port = strtoul(port, NULL, 10);
+unsigned long int getMPDPort(Config* config) {
+	return config->connectionInfo->port;
+}
 
-	if (connectionInfo.port == 0) {
-		debug("WARNING","port not correct, using default port 6600");
-		connectionInfo.port = 6600;
+void setMPDPort(LOGGER log, Config* config, char* port) {
+	config->connectionInfo->port = strtoul(port, NULL, 10);
+
+	if (config->connectionInfo->port == 0) {
+		logprintf(log, LOG_WARNING,"port not correct, using default port 6600\n");
+		config->connectionInfo->port = 6600;
 	}
 }
 
-void parseConfigLineToken(ConfigLine* cl, TokenStruct* tk) {
+void parseConfigLineToken(LOGGER log, Config* config, ConfigLine* cl, TokenStruct* tk) {
 
 	char output2[strlen(cl->value) +1];
 	memset(output2, 0, strlen(cl->value + 1));
@@ -251,32 +261,45 @@ void parseConfigLineToken(ConfigLine* cl, TokenStruct* tk) {
 	}
 }
 
-void parseConfigLineOutput(ConfigLine* cl) {
-	debug("DEBUG", "in output category parsing");
+void parseConfigLineOutput(LOGGER log, Config* config, ConfigLine* cl) {
+	//logprintf(log, LOG_DEBUG, "Error in output category parsing.\n");
 
 	char* output = malloc(strlen(cl->value) + 1);
 	deleteQMs(cl->value, output);
 
 	if (!strncmp(cl->key, CONFIG_PLAY, strlen(CONFIG_PLAY))) {
-		formatPlay(output);
+		logprintf(log, LOG_DEBUG, "Parsing play output string.\n");
+		free_token_struct(log, config->playFormat);
+		config->playFormat = parseTokenString(log, output);
 	} else if (!strncmp(cl->key, CONFIG_PAUSE, strlen(CONFIG_PAUSE))) {
-		formatPause(output);
+		logprintf(log, LOG_DEBUG, "Parsing pause output string.\n");
+		free_token_struct(log, config->pauseFormat);
+		config->pauseFormat = parseTokenString(log, output);
 	} else if (!strncmp(cl->key, CONFIG_STOP, strlen(CONFIG_STOP))) {
-		formatStop(output);
+		logprintf(log, LOG_DEBUG, "Parsing stop output string.\n");
+		free_token_struct(log, config->stopFormat);
+		config->stopFormat = parseTokenString(log, output);
+	} else {
+		logprintf(log, LOG_WARNING, "Unkown key in output category (%s).\n", cl->key);	
 	}
 
 	free(output);
 }
 
-void parseConfigLineGeneral(ConfigLine* cl) {
+void parseConfigLineGeneral(LOGGER log, Config* config, ConfigLine* cl) {
 
 
 	if (!strncmp(cl->key, CONFIG_HOST, strlen(CONFIG_HOST))) {
-		setMPDHost(cl->value);
+		setMPDHost(log, config, cl->value);
 		return;
 	}
 	if (!strncmp(cl->key, CONFIG_PORT, strlen(CONFIG_PORT))) {
-		setMPDPort(cl->value);
+		setMPDPort(log, config, cl->value);
+		return;
+	}
+
+	if (!strncmp(cl->key, CONFIG_LOGFILE, strlen(CONFIG_LOGFILE))) {
+		setLogFile(log, config, cl->value);
 		return;
 	}
 }
@@ -313,85 +336,92 @@ char* strncpyN(char* dest, char* src, int size) {
 
 }
 
-ConfigLine* gettingLineArgs(char* line) {
+void gettingLineArgs(LOGGER log, Config* config, ConfigLine* cl, char* line) {
 	line = cropSpacesAndTabs(line);
 	int i = 0;
 
 	while (line[i] != '=') {
 		if (line[i] == '\n') {
-			printf("Error parsing line: %s\n", line);
-			return NULL;
+			logprintf(log, LOG_ERROR, "Error parsing line: %s\n", line);
+			return;
 		}
 		i++;
 	}
 
-	ConfigLine* cl = malloc(sizeof(ConfigLine));
-
+	line[i] = '\0';
 	
-	cl->key = strncpyN(cl->key, line, i);
+	cl->key = line;
+	cl->value = (line + i + 1);
 
 	cl->key = cropSpacesAndTabsB(cl->key);
 
-	line += i + 1;
-
-	line = cropSpacesAndTabs(line);
-	cl->value = malloc(strlen(line) + 1);
-	strcpy(cl->value, line);
+	cl->value = cropSpacesAndTabs(cl->value);
 	cl->value = cropSpacesAndTabsB(cl->value);
+	//malloc(sizeof(ConfigLine));
 
-	return cl;
+	
+	//cl->key = strncpyN(cl->key, line, i);
+
+	//cl->key = cropSpacesAndTabsB(cl->key);
+
+	//line += i + 1;
+
+	//line = cropSpacesAndTabs(line);
+	//cl->value = malloc(strlen(line) + 1);
+	//strcpy(cl->value, line);
+	//cl->value = cropSpacesAndTabsB(cl->value);
+
+	return;
 }
 
 
 
-void parseConfigLine(Category cat, char* line) {
+void parseConfigLine(LOGGER log, Config* config, Category cat, char* line) {
 
+	ConfigLine cl = {
+		.key = "",
+		.value = ""
+	};
 
-	ConfigLine* cl = gettingLineArgs(line);
+	gettingLineArgs(log, config, &cl, line);
 
-	if (cl == NULL) {
+	if (!strcmp(cl.key, "")) {
 		
-		printf("lineargs not correct\n");
+		logprintf(log, LOG_ERROR, "lineargs not correct\n");
 		return;
 	}
 
 	switch (cat) {
 	
-		case C_GENERAL:
-			parseConfigLineGeneral(cl);
-			break;
 		case C_OUTPUT:
-			parseConfigLineOutput(cl);
+			parseConfigLineOutput(log, config, &cl);
 			break;
 		case C_TOKEN_RANDOM:
-			parseConfigLineToken(cl, &tokens.random);
+			parseConfigLineToken(log, config, &cl, &tokens.random);
 			break;
 		case C_TOKEN_REPEAT:
-			parseConfigLineToken(cl, &tokens.repeat);
+			parseConfigLineToken(log, config, &cl, &tokens.repeat);
 			break;
 		case C_TOKEN_DBUPDATE:
-			parseConfigLineToken(cl, &tokens.dbupdate);
+			parseConfigLineToken(log, config, &cl, &tokens.dbupdate);
 			break;
+		case C_GENERAL:
 		default:
-			parseConfigLineGeneral(cl);
+			parseConfigLineGeneral(log, config, &cl);
 			break;
 	}
-
-	free(cl->key);
-	free(cl->value);
-	free(cl);
 }
 
 
-void parseConfigFile(char* path) {
+void parseConfigFile(LOGGER log, Config* config, char* path) {
 
-	debug("DEBUG", "starting config reader");
+	logprintf(log, LOG_DEBUG, "starting config reader\n");
 
 	FILE* file = fopen(path, "r");
 
 	if (file == NULL) {
 
-		perror("Cannot read config file.\n");
+		logprintf(log, LOG_ERROR, "Cannot read config file.\n");
 		return;
 	}
 
@@ -403,16 +433,16 @@ void parseConfigFile(char* path) {
 
 	while ( (read = getline(&line, &len, file)) != -1) {
 		char* free_line = line;
-		debug("DEBUG", line);
+		logprintf(log, LOG_DEBUG, "Current line: %s\n", line);
 		
 		line = cropSpacesAndTabs(line);
 		if (line[0] != '#' && line[0] != '\n') {
 			
 			if (line[0] == '[') {
-				debug("DEBUG", line);
-				category = parseCategory(line);
+				logprintf(log, LOG_DEBUG, "Found category (%s)\n", line);
+				category = parseCategory(log, config, line);
 			} else {
-				parseConfigLine(category, line);
+				parseConfigLine(log, config, category, line);
 			}
 		}
 		free(free_line);
@@ -429,6 +459,7 @@ void parseConfigFile(char* path) {
 
 }
 
+/*
 void parseArguments(int argc, char* argv[]) {
 
 	initTokens();
@@ -460,18 +491,19 @@ void parseArguments(int argc, char* argv[]) {
 		formatStop(argv[i + 1]);
                 i++;
             }  else if (!strcmp(argv[i], "--help") || !strcmp(argv[i], "-h")) {
-                printHelp();
+                usage();
             } else if (!strcmp(argv[i], "--debug") || !strcmp(argv[i], "-d")) {
                 setDebug(1);
 	    } else if (i + 1 < argc && (!strcmp(argv[i], "--config") || !strcmp(argv[i], "-c"))) {
-	    	parseConfigFile(argv[i + 1]);
+	    	parseConfigFile(log, config, argv[i + 1]);
 		i++;
 	    } else {
                 printf("Invalid arguments.\n");
-                printHelp();
+                usage();
             }
         }
     
     }
     checkFormat();
 }
+*/

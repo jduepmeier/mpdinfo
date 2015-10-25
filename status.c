@@ -5,29 +5,27 @@
 
 #include "debug.h"
 #include "mpdinfo.h"
-#include "parse.h"
+//#include "parse.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
 
-int getStatusStruct(struct mpd_status **mpdstatus) {
+int getStatusStruct(LOGGER log, struct mpd_connection* conn, struct mpd_status **mpdstatus) {
 
-	struct mpd_connection* conn = NULL;
-	getConnection(&conn);
         *mpdstatus = mpd_run_status(conn);
         if (!*mpdstatus) {
-                debug("FAIL", mpd_connection_get_error_message(conn));
+                logprintf(log, LOG_ERROR, "%s\n", mpd_connection_get_error_message(conn));
                 return 0;
         }
         return 1;
 }
 
-int getStatusByFunc(void* func) {
+int getStatusByFunc(LOGGER log, struct mpd_connection* conn, void* func) {
 
 	struct mpd_status *mpdstatus = NULL;
 
-	if (!getStatusStruct(&mpdstatus)) {
+	if (!getStatusStruct(log, conn, &mpdstatus)) {
 		return -1;
 	}
 	int (*f)() = func;
@@ -38,9 +36,9 @@ int getStatusByFunc(void* func) {
 	return status;
 }
 
-int getDBUpdateStatus() {
+int getDBUpdateStatus(LOGGER log, struct mpd_connection* conn, int status, Config* config) {
 
-	int update = getStatusByFunc(&mpd_status_get_update_id);
+	int update = getStatusByFunc(log, conn, &mpd_status_get_update_id);
 
 	if (update != 0) {
 		return 1;
@@ -48,48 +46,68 @@ int getDBUpdateStatus() {
 	return 0;
 }
 
-int getRandomStatus() {
-	return getStatusByFunc(&mpd_status_get_random);
+int getRandomStatus(LOGGER log, struct mpd_connection* conn, int status, Config* config) {
+	return getStatusByFunc(log, conn, &mpd_status_get_random);
 }
 
-int getRepeatStatus() {
-        return getStatusByFunc(&mpd_status_get_repeat);
+int getRepeatStatus(LOGGER log, struct mpd_connection* conn, int status, Config* config) {
+        return getStatusByFunc(log, conn, &mpd_status_get_repeat);
 }
 
-int getStatus() {
-        return getStatusByFunc(&mpd_status_get_state);
+int getStatus(LOGGER log, struct mpd_connection* conn, int status, Config* config) {
+        return getStatusByFunc(log, conn, &mpd_status_get_state);
 }
 
-char* getTokenStatusString(int token, int status) {
+char* getTokenStatusString(int status, int playStatus, TokenConfigItem* item) {
 
 	char* output = NULL;
-	
+
 	if (status) {
-		output = getTokenByStatus(token);
+		switch	(playStatus) {
+			case MPD_STATE_STOP:
+				output = item->stop;
+				break;
+			case MPD_STATE_PAUSE:
+				output = item->pause;
+				break;
+			case MPD_STATE_PLAY:
+				output = item->play;
+				break;
+			default:
+				output = item->none;
+				break;
+		}
+
 	} else {
-		output = getNoneToken(token);
+		output = item->off;
 	}
 
-	char* str_status = malloc(strlen(output) + 1);
-	strcpy(str_status, output);
+	// check for NULL pointer
+	char* str_status;
+	if (!output) {
+		str_status = malloc(1);
+		str_status[0] = 0;
+	} else {
+		str_status = malloc(strlen(output) + 1);
+		strcpy(str_status, output);
+	}
 	return str_status;
 }
 
-char* getRepeatString() {
-	return getTokenStatusString(C_TOKEN_REPEAT, getRepeatStatus());
+char* getRepeatString(LOGGER log, struct mpd_connection* conn, int status, Config* config) {
+	return getTokenStatusString(getRepeatStatus(log, conn, status, config), status, config->tokens->repeat);
 }
 
-char* getRandomString() {
-	return getTokenStatusString(C_TOKEN_RANDOM, getRandomStatus());
+char* getRandomString(LOGGER log, struct mpd_connection* conn, int status, Config* config) {
+	return getTokenStatusString(getRandomStatus(log, conn, status, config), status, config->tokens->random);
 }
-char* getDBUpdateString() {
-	return getTokenStatusString(C_TOKEN_DBUPDATE, getDBUpdateStatus());
+char* getDBUpdateString(LOGGER log, struct mpd_connection* conn, int status, Config* config) {
+	return getTokenStatusString(getDBUpdateStatus(log, conn, status, config), status, config->tokens->dbupdate);
 }
 
-char* getStatusString() {
+char* getStatusString(LOGGER log, struct mpd_connection* conn, int status, Config* config) {
 
         char* output = malloc(8);
-        int status = getStatus();
 
         switch (status) {
 
@@ -108,73 +126,73 @@ char* getStatusString() {
         }
 }
 
-char* getTitle() {
-        
-	struct mpd_connection* conn = NULL;
-
-	getConnection(&conn);
+char* getTitle(LOGGER log, struct mpd_connection* conn, int status, Config* config) {
 
 	struct mpd_song *song = mpd_run_current_song(conn);
 
+	char* title = malloc(1);
+	title[0] = 0;
+
         if (song == NULL) {
-                return "";
+                return title;
         }
 
         const char* tit = mpd_song_get_tag(song, MPD_TAG_TITLE, 0);
         
         if (tit == NULL) {
-                return "";
+                return title;
         }
         
         if (strcmp(tit, "") == 0) {
-                return "";
+                return title;
         }
-
-        char* title = malloc(strlen(tit) +1);
+	free(title);
+        title = malloc(strlen(tit) +1);
         strcpy(title, tit);
         mpd_song_free(song);
 
         return title;
 }
 
-char* getArtist() {
-	struct mpd_connection* conn = NULL;
-
-	getConnection(&conn);
+char* getArtist(LOGGER log, struct mpd_connection* conn, int status, Config* config) {
 
         struct mpd_song *song = mpd_run_current_song(conn);
+	char* artist = malloc(1);
+	artist[0] = 0;
 
 	if (song == NULL) {
-		return "";
+		return artist;
 	}
 
 	const char* art = mpd_song_get_tag(song, MPD_TAG_ARTIST, 0);
 	
 	if (art == NULL) {
-		return "";
+		return artist;
 	}
         if (strcmp(art,"") == 0) {
-		return "";
+		return artist;
 	}
 
-	char* artist = malloc(strlen(art) +1);
+	free(artist);
+	
+	artist = malloc(strlen(art) +1);
         strcpy(artist, art);
         mpd_song_free(song);
 	return artist;	
 }
 
-int getVolume() {
-        struct mpd_status* status = NULL;
-	if(!getStatusStruct(&status)) {
+int getVolume(LOGGER log, struct mpd_connection* conn, int status, Config* config) {
+        struct mpd_status* mstatus = NULL;
+	if(!getStatusStruct(log, conn, &mstatus)) {
 		return -1;
 	}
-	int volume = mpd_status_get_volume(status);
-        mpd_status_free(status);
+	int volume = mpd_status_get_volume(mstatus);
+        mpd_status_free(mstatus);
         return volume;
 }
 
-char* getVolumeString() {
-        int vol = getVolume();
+char* getVolumeString(LOGGER log, struct mpd_connection* conn, int status, Config* config) {
+        int vol = getVolume(log, conn, status, config);
         char* volString = malloc(4);
         sprintf(volString, "%d", vol);
         return volString;
