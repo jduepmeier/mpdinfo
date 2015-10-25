@@ -6,4 +6,5 @@ FormatToken* buildTokenStructure(LOGGER log, const char* input);
 void formatControls(const char* format, char* output);
 char* generateOutputString(LOGGER log, Config* config, struct mpd_connection* conn);
 void freeTokenStruct(LOGGER log, FormatToken* token);
+void freeTokenConfig(TokenConfig* config);
 void freeTokenStructs(LOGGER log, Config* config);

@@ -285,6 +285,7 @@ int econfig_parse(EConfig* config) {
 			return out;
 		}
 	}
+	free(line);
 
 	fclose(file);
 

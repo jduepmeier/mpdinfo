@@ -198,6 +198,7 @@ void* wait_for_action(LOGGER log, Config* config, struct mpd_connection* conn) {
 	logprintf(log, LOG_DEBUG, "Freeing connections.\n");
 	mpd_connection_free(conn);
 	freeTokenStructs(log, config);
+	freeTokenConfig(config->tokens);
 	free(config->connectionInfo->host);
 	return 0;
 }
