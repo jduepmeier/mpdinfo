@@ -331,7 +331,7 @@ int setConfigPath(int argc, char** argv, void* c) {
 	econfig_addParam(config, cats[1], "play", setOutputParam);
 	econfig_addParam(config, cats[1], "pause", setOutputParam);
 	econfig_addParam(config, cats[1], "none", setOutputParam);
-	econfig_addParam(config, cats[1], "stop", setTokenParam);
+	econfig_addParam(config, cats[1], "stop", setOutputParam);
 
 
 	int i;
