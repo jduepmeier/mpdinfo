@@ -280,7 +280,9 @@ int setTokenParam(const char* cat, const char* key, const char* value, EConfig* 
 	}
 
 	char* val = malloc(strlen(value) + 1);
-	strcpy(val, value);
+	//strcpy(val, value);
+
+	formatControls(value, val);
 
 	if (!strcmp(key, "play")) {
 		if (item->play) {
