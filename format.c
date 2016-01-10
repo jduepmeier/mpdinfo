@@ -44,7 +44,9 @@ char* getTokenStr(char* str) {
 	
 TOKEN_TYPE getTokenEnum(char* str) {
 	TOKEN_TYPE type = TOKEN_UNKOWN;
-	
+
+	printf("Current Token Str: %s\n", str);
+
 	if (!strncmp(str, STR_ARTIST, strlen(STR_ARTIST))) {
 		type = TOKEN_ARTIST;
 	} else if (!strncmp(str, STR_TITLE, strlen(STR_TITLE))) {
@@ -57,7 +59,7 @@ TOKEN_TYPE getTokenEnum(char* str) {
 		type = TOKEN_REPEAT;
 	} else if (!strncmp(str, STR_DBUPDATE, strlen(STR_DBUPDATE))) {
                 type = TOKEN_DBUPDATE;
-        } else if (strncmp(str, STR_RANDOM, strlen(STR_RANDOM))) {
+        } else if (!strncmp(str, STR_RANDOM, strlen(STR_RANDOM))) {
                 type = TOKEN_RANDOM;
         }
 	return type;
@@ -156,7 +158,6 @@ char* generateOutputString(LOGGER log, Config* config, struct mpd_connection* co
 	output[0] = 0;
 
 	while(token) {
-
 		char* next;
 		char* args;
 		
@@ -164,8 +165,11 @@ char* generateOutputString(LOGGER log, Config* config, struct mpd_connection* co
 		if (token->type != TOKEN_TEXT) {
 			
 			char* (*p)(LOGGER log, struct mpd_connection* conn, int status, Config* config) = token->data;
+			if (!p) {
+				logprintf(log, LOG_ERROR, "Function pointer is NULL (token->type = %d)\n", token->type);
+				break;
+			}
 			args = p(log, conn, status, config);
-
 		} else {
 			args = malloc(strlen((char*) token->data) + 1);
 			strcpy(args, token->data);
@@ -196,6 +200,26 @@ FormatToken* buildToken(LOGGER log, TOKEN_TYPE type, void* data) {
 	return token;
 }
 
+void freeTokenStruct(LOGGER log, FormatToken* token) {
+
+	if (!token) {
+		return;
+	}
+	freeTokenStruct(log, token->next);
+
+	if (!token->type) {
+		logprintf(log, LOG_WARNING, "Type is not set. This should not be happen.\n");
+		free(token);
+		return;
+	}
+
+	if (token->type == TOKEN_TEXT) {
+		logprintf(log, LOG_DEBUG,  "FREE %s\n", token->data);
+		free(token->data);
+	}
+	free(token);
+}
+
 FormatToken* buildTokenStructure(LOGGER log, const char* input) {
 
 	logprintf(log, LOG_DEBUG, "build token structure from:%s\n", input);
@@ -211,7 +235,7 @@ FormatToken* buildTokenStructure(LOGGER log, const char* input) {
 	char* current = format;
 	char* tmp;
 	char* tokenstr;
-	FORMAT_TYPE type;
+	TOKEN_TYPE type;
 
 	int len = strlen(format);
 
@@ -245,6 +269,12 @@ FormatToken* buildTokenStructure(LOGGER log, const char* input) {
 				}
 				
 				type = getTokenEnum(tokenstr);
+
+				if (type == TOKEN_UNKOWN) {
+					logprintf(log, LOG_ERROR, "Unkown token (%s).\n", tokenstr);
+					freeTokenStruct(log, tokens);
+					return NULL;
+				}
 
 				if (!tokens) {
 					tokens = buildToken(log, type, getTokenAction(type));
@@ -288,25 +318,7 @@ void checkFormat() {
 
 }
 
-void freeTokenStruct(LOGGER log, FormatToken* token) {
 
-	if (!token) {
-		return;
-	}
-	freeTokenStruct(log, token->next);
-
-	if (!token->type) {
-		logprintf(log, LOG_WARNING, "Type is not set. This should not be happen.\n");
-		free(token);
-		return;
-	}
-
-	if (token->type == TOKEN_TEXT) {
-		logprintf(log, LOG_DEBUG,  "FREE %s\n", token->data);
-		free(token->data);
-	}
-	free(token);
-}
 
 void freeTokenStructs(LOGGER log, Config* config) {
 	freeTokenStruct(log, config->play);

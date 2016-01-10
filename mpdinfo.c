@@ -21,7 +21,7 @@
 
 //#include "parse.h"
 #include "help.h"
-#include "debug.h"
+//#include "debug.h"
 #include "format.h"
 #include "status.h"
 #include "mpdinfo.h"
@@ -153,7 +153,17 @@ int mpdinfo_reconnect(LOGGER log, Config* config, struct mpd_connection * conn) 
 // refresh the output
 int refresh(LOGGER log, Config* config, struct mpd_connection* conn) {
 	logprintf(log, LOG_DEBUG, "Starting refresh.\n");	
-	
+
+
+	if (!config) {
+		return 1;
+	}
+
+	if (!conn) {
+		logprintf(log, LOG_WARNING, "No connection");
+		mpdinfo_reconnect(log, config, conn);
+	}
+
 	// generate output
 	char* out = generateOutputString(log, config, conn);
 	
@@ -254,15 +264,20 @@ TokenConfigItem* getTokenConfigItem(const char* cat, Config* config) {
 int setOutputParam(const char* cat, const char* key, const char* value, EConfig* econfig, void* c) {
 	Config* config = (Config*) c;
 
+	FormatToken* token = parseTokenString(config->log, value);
+
+	if (!token) {
+		return -1;
+	}
 
 	if (!strcmp(key, "pause")) {
-		config->pause = parseTokenString(config->log, value);
+		config->pause = token;
 	} else if (!strcmp(key, "none")) {
-		config->none = parseTokenString(config->log, value);
+		config->none = token;
 	} else if (!strcmp(key, "play")) {
-		config->play = parseTokenString(config->log, value);
+		config->play = token;
 	} else if (!strcmp(key, "stop")) {
-		config->stop = parseTokenString(config->log, value);
+		config->stop = token;
 	}
 
 	return 0;
@@ -426,6 +441,8 @@ int main(int argc, char** argv) {
 	addArguments();
 	char* output[argc];
 	if (eargs_parse(argc, argv, output, &config) < 0) {
+		freeTokenStructs(config.log, &config);
+		free(config.connectionInfo->host);
 		return 1;
 	}
 	struct mpd_connection* conn;

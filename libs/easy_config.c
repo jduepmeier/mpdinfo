@@ -282,6 +282,7 @@ int econfig_parse(EConfig* config) {
 	ssize_t read = 0;
 	while ((read = getline(&line, &len, file)) != -1) {
 		if ((out = econfig_parseLine(config, line, len)) < 0) {
+			free(line);
 			return out;
 		}
 	}

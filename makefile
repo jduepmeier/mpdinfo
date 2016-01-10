@@ -6,7 +6,7 @@ all: mpdinfo
 debug: CFLAGS += -g
 debug: mpdinfo
 
-mpdinfo: mpdinfo.c help.c format.c debug.c status.c format_structure.c libs/*.c
+mpdinfo: mpdinfo.c help.c format.c status.c format_structure.c libs/*.c
 
 install:
 	install -m 0755 mpdinfo $(INSTALLPATH)
