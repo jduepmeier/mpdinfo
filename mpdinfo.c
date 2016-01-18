@@ -226,7 +226,7 @@ int setConfigHost(const char* category, char* key, char* value, EConfig* econfig
 
 	logprintf(config->log, LOG_DEBUG, "Set config host");
 
-	if (config->connectionInfo) {
+	if (!config->connectionInfo) {
 		return 1;	
 	}
 			
