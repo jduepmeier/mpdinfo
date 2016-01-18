@@ -226,7 +226,11 @@ int setConfigHost(const char* category, char* key, char* value, EConfig* econfig
 
 	logprintf(config->log, LOG_DEBUG, "Set config host");
 
-	if (config->connectionInfo && config->connectionInfo->host) {
+	if (config->connectionInfo) {
+		return 1;	
+	}
+			
+	if (config->connectionInfo->host) {
 		free(config->connectionInfo->host);
 	}
 
@@ -272,12 +276,13 @@ int setOutputParam(const char* cat, const char* key, const char* value, EConfig*
 
 	if (!strcmp(key, "pause")) {
 		config->pause = token;
-	} else if (!strcmp(key, "none")) {
-		config->none = token;
 	} else if (!strcmp(key, "play")) {
 		config->play = token;
 	} else if (!strcmp(key, "stop")) {
 		config->stop = token;
+	} else {	
+		// save in none
+		config->none = token;
 	}
 
 	return 0;
@@ -324,6 +329,8 @@ int setTokenParam(const char* cat, const char* key, const char* value, EConfig* 
 			free(item->off);
 		}
 		item->off = val;
+	} else {
+		free(val);
 	}
 
 	return 0;

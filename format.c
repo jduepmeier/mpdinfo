@@ -252,7 +252,7 @@ FormatToken* buildTokenStructure(LOGGER log, const char* input) {
 
 					int length = strlen(current) - strlen(format + i);
 					tmp = malloc(length + 1);
-					memset(tmp, sizeof(tmp), 0);
+					memset(tmp, 0, length + 1);
 					strncpy(tmp, current, length);
 					tmp[length] = '\0';
 					current = (format + i);

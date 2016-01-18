@@ -241,7 +241,7 @@ int econfig_parseLine(EConfig* config, char* line, size_t len) {
 	if (line[0] == '[') {
 		config->lastid = econfig_parseCategory(config, line);
 		
-		if (config->lastid < 0) {
+		if (config->lastid > 0) {
 			return config->lastid;
 		} else {
 			return EC_SUCCESS;
