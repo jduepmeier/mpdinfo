@@ -126,59 +126,103 @@ char* getStatusString(LOGGER log, struct mpd_connection* conn, int status, Confi
         }
 }
 
-char* getTitle(LOGGER log, struct mpd_connection* conn, int status, Config* config) {
-
-	struct mpd_song *song = mpd_run_current_song(conn);
-
-	char* title = malloc(1);
-	title[0] = 0;
-
-        if (song == NULL) {
-                return title;
-        }
-
-        const char* tit = mpd_song_get_tag(song, MPD_TAG_TITLE, 0);
-        
-        if (tit == NULL) {
-                return title;
-        }
-        
-        if (strcmp(tit, "") == 0) {
-                return title;
-        }
-	free(title);
-        title = malloc(strlen(tit) +1);
-        strcpy(title, tit);
-        mpd_song_free(song);
-
-        return title;
-}
-
-char* getArtist(LOGGER log, struct mpd_connection* conn, int status, Config* config) {
-
+char* getId3Tag(LOGGER log, struct mpd_connection* conn, int status, Config* config, 
+		enum mpd_tag_type tag_type) {
         struct mpd_song *song = mpd_run_current_song(conn);
-	char* artist = malloc(1);
-	artist[0] = 0;
+	char* out = malloc(1);
+	out[0] = 0;
 
 	if (song == NULL) {
-		return artist;
+		return out;
 	}
 
-	const char* art = mpd_song_get_tag(song, MPD_TAG_ARTIST, 0);
+	const char* tag = mpd_song_get_tag(song, tag_type, 0);
 	
-	if (art == NULL) {
-		return artist;
+	if (tag == NULL) {
+		return out;
 	}
-        if (strcmp(art,"") == 0) {
-		return artist;
+        if (strcmp(tag,"") == 0) {
+		return out;
 	}
 
-	free(artist);
+	free(out);
 	
-	artist = malloc(strlen(art) +1);
-        strcpy(artist, art);
+	out = malloc(strlen(tag) +1);
+        strncpy(out, tag, strlen(tag) + 1);
         mpd_song_free(song);
-	return artist;	
+	return out;
+
+}
+char* getTitle(LOGGER log, struct mpd_connection* conn, int status, Config* config) {
+        return getId3Tag(log, conn, status, config, MPD_TAG_TITLE);
+}
+char* getArtist(LOGGER log, struct mpd_connection* conn, int status, Config* config) {
+	return getId3Tag(log, conn, status, config, MPD_TAG_ARTIST);
+}
+
+char* getFilename(LOGGER log, struct mpd_connection* conn, int status, Config* config) {
+	struct mpd_song* song = mpd_run_current_song(conn);
+
+	char* out = malloc(1);
+	out[0] = 0;
+
+	if (song == NULL) {
+		return out;
+	}
+
+	const char* uri = mpd_song_get_uri(song);
+
+	if (uri == NULL) {
+		return out;
+	}
+
+	if (strcmp(uri, "") == 0) {
+		return out;
+	}
+
+	const char* str = strrchr(uri, '/');
+
+	// check if more then the / is in the string
+	if (!str || strlen(str) < 2) {
+		str = uri;
+	}
+
+	str++;
+
+	free(out);
+	out = malloc(strlen(str) + 1);
+	strncpy(out, str, strlen(str) + 1);
+	mpd_song_free(song);
+	
+	return out;
+}
+
+char* getElapsedTime(LOGGER log, struct mpd_connection* conn, int status, Config* config) {
+
+	char* out = malloc(1);
+	out[0] = 0;
+	
+	struct mpd_status* mstatus = NULL;
+	if (!getStatusStruct(log, conn, &mstatus)) {
+		return out;
+	}
+
+	unsigned time = mpd_status_get_elapsed_time(mstatus);
+
+	unsigned sec;
+	unsigned min;
+
+	sec = time % 60;
+	min = time / 60;
+
+	free(out);
+
+	int length = snprintf(NULL, 0, "%d:%02d", min, sec) + 1;
+	out = malloc(length);
+
+	snprintf(out, length, "%d:%02d", min, sec);
+
+	return out; 
 }
 
 int getVolume(LOGGER log, struct mpd_connection* conn, int status, Config* config) {

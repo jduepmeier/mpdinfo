@@ -8,6 +8,8 @@ int getStatus();
 char* getStatusString();
 char* getTitle();
 char* getArtist();
+char* getFilename();
+char* getElapsedTime();
 int getVolume();
 char* getVolumeString();
 int getDBUpdateStatus();

@@ -18,6 +18,8 @@
 #define STR_REPEAT "%repeat%"
 #define STR_DBUPDATE "%dbupdate%"
 #define STR_RANDOM "%random%"
+#define STR_FILENAME "%filename%"
+#define STR_ELAPSED_TIME "%elapsed_time%"
 
 #define DEFAULT_FORMAT_STRING "Current Track (Vol %volume%%):\n -%status%-\n %artist% - %title%"
 #define DEFAULT_STOPPED_STRING "-stopped-"
@@ -33,11 +35,16 @@ char* getTokenStr(char* str) {
 		return STR_STATUS;
 	} else if (!strncmp(str, STR_REPEAT, strlen(STR_REPEAT))) {
 		return STR_REPEAT;
+	} else if(!strncmp(str, STR_FILENAME, strlen(STR_FILENAME))) {
+		return STR_FILENAME;
 	} else if (!strncmp(str, STR_DBUPDATE, strlen(STR_DBUPDATE))) {
 		return STR_DBUPDATE;
 	} else if (!strncmp(str, STR_RANDOM, strlen(STR_RANDOM))) {
 		return STR_RANDOM;
+	} else if (!strncmp(str, STR_ELAPSED_TIME, strlen(STR_ELAPSED_TIME))) {
+		return STR_ELAPSED_TIME;
 	}
+
 	return "";
 }
 
@@ -61,7 +68,12 @@ TOKEN_TYPE getTokenEnum(char* str) {
                 type = TOKEN_DBUPDATE;
         } else if (!strncmp(str, STR_RANDOM, strlen(STR_RANDOM))) {
                 type = TOKEN_RANDOM;
-        }
+        } else if (!strncmp(str, STR_FILENAME, strlen(STR_FILENAME))) {
+		type = TOKEN_FILENAME;
+	} else if (!strncmp(str, STR_ELAPSED_TIME, strlen(STR_ELAPSED_TIME))) {
+		type = TOKEN_ELAPSED_TIME;
+	}
+
 	return type;
 }
 
@@ -73,6 +85,8 @@ void* getTokenAction(TOKEN_TYPE type) {
 			return &getArtist;
 		case TOKEN_TITLE:
 			return &getTitle;
+		case TOKEN_FILENAME:
+			return &getFilename;
 		case TOKEN_REPEAT:
 			return &getRepeatString;
 		case TOKEN_VOLUME:
@@ -83,11 +97,14 @@ void* getTokenAction(TOKEN_TYPE type) {
 			return &getDBUpdateString;
 		case TOKEN_RANDOM:
 			return &getRandomString;
+		case TOKEN_ELAPSED_TIME:
+			return &getElapsedTime;
 		default:
 			return NULL;
 	}
 }
 
+// parse special characters
 void formatControls(const char* format, char* output) {
 	
 	int i = 0;
@@ -136,6 +153,7 @@ char* generateOutputString(LOGGER log, Config* config, struct mpd_connection* co
 	FormatToken* token = NULL;
 	int status = getStatus(log, conn);
 
+	// get right output string
 	switch (status) {
 		case MPD_STATE_STOP:
 			token = config->stop;
