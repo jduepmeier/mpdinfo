@@ -321,6 +321,7 @@ FormatToken* buildToken(LOGGER log, Config* config, TOKEN_TYPE type, char* token
 		if (!data) {
 			logprintf(log, LOG_WARNING, "Unkown token (%d)\n", type);
 			free(data);
+			free(token);
 			return NULL;
 		} else {
 			token->data = data;
