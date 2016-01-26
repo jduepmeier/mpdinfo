@@ -4,7 +4,7 @@ env:
   global:
     # COVERITY_SCAN_TOKEN
     # ** specific to your project **
-    - secure: "hL_6Rzge_m5eGz--g2quIA"
+    - secure: "kvIg1iJ+TxG6FraHQgAvEVKpBp2skomUCnEY7bVyS5yhDAA8zqGyqztbt+nlf5eu5Rj+yF6Je2H4HGIs8wAMduip0iDEeWVEHmLlg/LyOu6qB7wVbAHGqQCALzLJhrQIIZ1MKzTPGUOAs9xQkG27KO+lorAZ0t6MmF7QETqg140klYaHEA4vZiGTmHAmyRbPiQjwx4BCWvbpoalynt1MlK1AAfKwI1Muw+/Fuuc8jH8BSuyWzze4iuKUO5dnH3At382YL4+2N4MsSiAbimR+PQfL3wwrP9L7+BMdO19h19bssslr/+fj4bBohOORcaQruLgXwmEPytl0MPEAKTg4f9Lf9y+dTPd3AHe5Nb2WdgWYxPM7mXmBZkNAMRSvuD2KtyYOlrkvwSmILdTUwhj9i30GhSaTPezmCR4TFWyub961wGj7Ml2bxsnMPnFoz/xEi+cvmK1AFbO/iu3grPqRH3i5+e7eCoYv5RlMZzUDjO8S+vnJMRDfw77eT2AXw8+UepWro5XK8pd6jv/XGiMxzZ2z/bSWv3PRmOxXAvhSGTyuvIFL0teQGxFcJgxDFwFbrG2L2sHvYZYU+dcoknOWRerDmPizNqzWP5a3smzbOEq6GcC3fADDsSiyxcIBEGiLzmXg6nKEd9sVtXgNDcHJaCnaJEZhuVRHjpALZcKDBY8="
 
 addons:
   apt:
@@ -18,7 +18,7 @@ addons:
     project:
       name: jduepmeier/mpdinfo
       version: 1.0
-      description: info window
+      description: info window for mpd
 
     # Where email notification of build analysis results will be sent
     notification_email: j.duepmeier@googlemail.com
