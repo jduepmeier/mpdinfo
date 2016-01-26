@@ -1,4 +1,5 @@
 language: c
+script: make
 env:
   global:
     # COVERITY_SCAN_TOKEN
@@ -6,6 +7,9 @@ env:
     - secure: "hL_6Rzge_m5eGz--g2quIA"
 
 addons:
+  apt:
+    packages:
+      - libmpdclient-dev
   coverity_scan:
 
     # GitHub project metadata
