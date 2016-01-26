@@ -10,7 +10,7 @@ addons:
   apt:
     packages:
       - libmpdclient-dev
-      - libmpdclient
+      - libmpdclient2
   coverity_scan:
 
     # GitHub project metadata
