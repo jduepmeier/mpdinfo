@@ -133,18 +133,17 @@ char* getId3Tag(LOGGER log, struct mpd_connection* conn, int status, Config* con
 	out[0] = 0;
 
 	if (song == NULL) {
+		mpd_song_free(song);
 		return out;
 	}
 
 	const char* tag = mpd_song_get_tag(song, tag_type, 0);
 	
-	if (tag == NULL) {
+	if (tag == NULL || !strcmp(tag, "")) {
+		mpd_song_free(song);
 		return out;
 	}
-        if (strcmp(tag,"") == 0) {
-		return out;
-	}
-
+	
 	free(out);
 	
 	out = malloc(strlen(tag) +1);
@@ -221,6 +220,8 @@ char* getElapsedTime(LOGGER log, struct mpd_connection* conn, int status, Config
 	out = malloc(length);
 
 	snprintf(out, length, "%d:%02d", min, sec);
+
+	mpd_status_free(mstatus);
 
 	return out; 
 }
