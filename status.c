@@ -3,7 +3,6 @@
 #include <mpd/client.h>
 #include <mpd/tag.h>
 
-#include "debug.h"
 #include "mpdinfo.h"
 //#include "parse.h"
 #include <stdio.h>

@@ -4,10 +4,8 @@
 
 #include <mpd/status.h>
 
-#include "debug.h"
 #include "mpdinfo.h"
 #include "status.h"
-//#include "parse.h"
 
 #include "libs/logger.h"
 
