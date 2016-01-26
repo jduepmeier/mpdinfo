@@ -1,5 +1,5 @@
 INSTALLPATH=/usr/local/bin
-CFLAGS=-Wall -lmpdclient -lpthread
+CFLAGS=-Wall -lmpdclient
 .PHONY: all debug install
 all: mpdinfo
 
