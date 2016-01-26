@@ -8,7 +8,15 @@ typedef struct {
 	unsigned long int port;
 } ConnectionInfo;
 
-typedef struct {
+
+#ifndef CONFIG_STRUCT
+#define CONFIG_STRUCT 1
+
+typedef struct Config Config;
+
+#endif
+
+struct Config {
         char* configPath;
         char* format;
 	LOGGER log;
@@ -17,8 +25,9 @@ typedef struct {
         FormatToken* stop;
         FormatToken* none;
 	TokenConfig* tokens;
+	DecisionToken* decTokens;
 	ConnectionInfo* connectionInfo;
-} Config;
+};
 
 void logconfig(LOGGER log, unsigned level, Config* config);
 char* getArtist();

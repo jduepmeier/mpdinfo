@@ -61,16 +61,16 @@ int setFormat(int argc, char** argv, void* c) {
 
 	// check if there are empty formats
 	if (!config->play) {
-		config->play = parseTokenString(config->log, argv[1]);
+		config->play = parseTokenString(config->log, config, argv[1]);
 	}
 	if (!config->pause) {
-		config->pause = parseTokenString(config->log, argv[1]);
+		config->pause = parseTokenString(config->log, config, argv[1]);
 	}
 	if (!config->stop) {
-		config->stop = parseTokenString(config->log, argv[1]);
+		config->stop = parseTokenString(config->log, config, argv[1]);
 	}
 	if (!config->none) {
-		config->none = parseTokenString(config->log, argv[1]);
+		config->none = parseTokenString(config->log, config, argv[1]);
 	}
 	
 	config->format = argv[1];
@@ -81,7 +81,7 @@ int setFormat(int argc, char** argv, void* c) {
 // sets the pause format string from arguments
 int setPauseFormat(int argc, char** argv, void* c) {
 	Config* config = (Config*) c;
-	config->pause = parseTokenString(config->log, argv[1]);
+	config->pause = parseTokenString(config->log, config, argv[1]);
 
 	return 0;
 }
@@ -89,7 +89,7 @@ int setPauseFormat(int argc, char** argv, void* c) {
 // sets the play format string from arguments
 int setPlayFormat(int argc, char** argv, void* c) {
 	Config* config = (Config*) c;
-	config->play = parseTokenString(config->log, argv[1]);
+	config->play = parseTokenString(config->log, config, argv[1]);
 
 	return 0;
 }
@@ -97,7 +97,7 @@ int setPlayFormat(int argc, char** argv, void* c) {
 // sets the stop format string from arguments
 int setStopFormat(int argc, char** argv, void* c) {
 	Config* config = (Config*) c;
-	config->stop = parseTokenString(config->log, argv[1]);
+	config->stop = parseTokenString(config->log, config, argv[1]);
 
 	return 0;
 }
@@ -268,7 +268,7 @@ TokenConfigItem* getTokenConfigItem(const char* cat, Config* config) {
 int setOutputParam(const char* cat, const char* key, const char* value, EConfig* econfig, void* c) {
 	Config* config = (Config*) c;
 
-	FormatToken* token = parseTokenString(config->log, value);
+	FormatToken* token = parseTokenString(config->log, config, value);
 
 	if (!token) {
 		return -1;
@@ -283,6 +283,51 @@ int setOutputParam(const char* cat, const char* key, const char* value, EConfig*
 	} else {	
 		// save in none
 		config->none = token;
+	}
+
+	return 0;
+}
+
+int setDecisionParam(const char* cat, const char* key, const char* value, EConfig* econfig, void* c) {
+
+	Config* config = (Config*) c;
+
+	if (!strcmp(key, "name")) {
+
+		DecisionToken* dt = config->decTokens;
+		config->decTokens = malloc(sizeof(DecisionToken));
+		config->decTokens->next = dt;
+		config->decTokens->type = -1;
+		config->decTokens->name = malloc(strlen(value) + 1);
+		strncpy(config->decTokens->name, value, strlen(value) + 1);
+
+		config->decTokens->a = NULL;
+		config->decTokens->b = NULL;
+
+		return 0;
+	}
+
+	if (!config->decTokens) {
+		logprintf(config->log, LOG_ERROR, "Name must be the first entry in decision token.\n");
+		return 1;
+	}
+
+	if (!strcmp(key, "type")) {
+		if (!strcmp(value, "IF") || !strcmp(value, "if")) {
+			config->decTokens->type = TOKEN_IF;
+		} else if (!strcmp(value, "IFNOT") || !strcmp(value, "ifnot")) {
+			config->decTokens->type = TOKEN_IFNOT;
+		}else {
+			logprintf(config->log, LOG_ERROR, "Unkown token type: %s.\n", value);
+			return 1;
+		}
+	} else if (!strcmp(key, "a")) {
+		config->decTokens->a = parseTokenString(config->log, config, value);
+	} else if (!strcmp(key, "b")) {
+		config->decTokens->b = parseTokenString(config->log, config, value);
+	} else {
+		logprintf(config->log, LOG_ERROR, "Unkown key %s in decision token parsing.\n", key);
+		return 1;
 	}
 
 	return 0;
@@ -341,13 +386,14 @@ int setConfigPath(int argc, char** argv, void* c) {
 	Config* prg_config = (Config*) c;
 	EConfig* config = econfig_init(argv[1], c);
 	
-	unsigned cats[5];
+	unsigned cats[6];
 
 	cats[0] = econfig_addCategory(config, "general");
 	cats[1] = econfig_addCategory(config, "output");
 	cats[2] = econfig_addCategory(config, "token_repeat");
 	cats[3] = econfig_addCategory(config, "token_random");
 	cats[4] = econfig_addCategory(config, "token_dbupdate");
+	cats[5] = econfig_addCategory(config, "token_decision");
 
 	econfig_addParam(config, cats[0], "host", setConfigHost);
 	econfig_addParam(config, cats[0], "port", setConfigPort);
@@ -366,6 +412,11 @@ int setConfigPath(int argc, char** argv, void* c) {
 		econfig_addParam(config, cats[i], "stop", setTokenParam);
 		econfig_addParam(config, cats[i], "off", setTokenParam);
 	}
+
+	econfig_addParam(config, cats[5], "name", setDecisionParam);
+	econfig_addParam(config, cats[5], "type", setDecisionParam);
+	econfig_addParam(config, cats[5], "a", setDecisionParam);
+	econfig_addParam(config, cats[5], "b", setDecisionParam);
 
 	logprintf(prg_config->log, LOG_DEBUG, "Starting to parse config file.\n");
 	int out = econfig_parse(config);
@@ -399,6 +450,28 @@ TokenConfigItem nullTokenConfigItem() {
 		.none = NULL,
 		.off = NULL
 	};
+}
+
+void cleanDecisionTokens(Config* config, DecisionToken* token) {
+
+	if (!token) {
+		return;
+	}
+
+	cleanDecisionTokens(config, token->next);
+
+	if (token->a) {
+		freeTokenStruct(config->log, token->a);
+	}
+
+	if (token->b) {
+		freeTokenStruct(config->log, token->b);
+	}
+
+	if (token->name) {
+		free(token->name);
+	}
+	free(token);
 }
 
 int main(int argc, char** argv) {
@@ -441,6 +514,7 @@ int main(int argc, char** argv) {
 		.stop = NULL,
 		.none = NULL,
 		.tokens = &tokens,
+		.decTokens = NULL,
 		.connectionInfo = &info
 	};
 
@@ -455,6 +529,7 @@ int main(int argc, char** argv) {
 	struct mpd_connection* conn;
 	if ((conn = mpdinfo_connect(config.log, &config)) == NULL) {
 		logprintf(config.log, LOG_DEBUG, "Freeing structs.\n");
+		cleanDecisionTokens(&config, config.decTokens);
 		freeTokenStructs(config.log, &config);
 		free(config.connectionInfo->host);
 		return -1;
@@ -471,6 +546,7 @@ int main(int argc, char** argv) {
 	logconfig(config.log, LOG_DEBUG, &config);
 	wait_for_action(config.log, &config, conn);
 	
+	cleanDecisionTokens(&config, config.decTokens);
 	//pthread_join(pid, NULL);
 	return 0;
 }

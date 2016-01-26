@@ -12,7 +12,9 @@ typedef enum {
 	TOKEN_RANDOM,
 	TOKEN_TEXT,
 	TOKEN_FILENAME,
-	TOKEN_ELAPSED_TIME
+	TOKEN_ELAPSED_TIME,
+	TOKEN_IF,
+	TOKEN_IFNOT
 } TOKEN_TYPE;
 
 typedef enum {
@@ -25,6 +27,16 @@ struct FormatToken {
 	TOKEN_TYPE type;
 	void* data;
 	FormatToken* next;
+};
+
+typedef struct DecisionToken DecisionToken;
+
+struct DecisionToken {
+	char* name;
+	TOKEN_TYPE type;
+	FormatToken* a;
+	FormatToken* b;
+	DecisionToken* next;
 };
 
 typedef struct {
@@ -41,4 +53,8 @@ typedef struct {
 	TokenConfigItem* dbupdate;
 } TokenConfig;
 
-FormatToken* parseTokenString(LOGGER log, const char* input);
+#ifndef CONFIG_STRUCT
+#define CONFIG_STRUCT 1
+typedef struct Config Config;
+#endif
+FormatToken* parseTokenString(LOGGER log, Config* config, const char* input);

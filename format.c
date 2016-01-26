@@ -24,7 +24,23 @@
 #define DEFAULT_FORMAT_STRING "Current Track (Vol %volume%%):\n -%status%-\n %artist% - %title%"
 #define DEFAULT_STOPPED_STRING "-stopped-"
 
-char* getTokenStr(char* str) {
+char* checkForUserToken(Config* config, char* str) {
+
+	DecisionToken* token = config->decTokens;
+
+	while (token) {
+
+		if (!strncmp(str, token->name, strlen(token->name))) {
+			return token->name;
+		}
+
+		token = token->next;
+	}
+
+	return "";
+}
+
+char* getTokenStr(Config* config, char* str) {
 	if (!strncmp(str, STR_ARTIST, strlen(STR_ARTIST))) {
 		return STR_ARTIST;
 	} else if (!strncmp(str, STR_TITLE, strlen(STR_TITLE))) {
@@ -45,11 +61,28 @@ char* getTokenStr(char* str) {
 		return STR_ELAPSED_TIME;
 	}
 
-	return "";
+	return checkForUserToken(config, str);
 }
 
+TOKEN_TYPE getUserToken(Config* config, char* str) {
+
+	DecisionToken* token = config->decTokens;
+	TOKEN_TYPE type = TOKEN_UNKOWN;	
+		
+	while(token) {
+
+		if (!strncmp(str, token->name, strlen(token->name))) {
+			type = token->type;
+			break;
+		}
+
+		token = token->next;
+	}
+
+	return type;
+}
 	
-TOKEN_TYPE getTokenEnum(char* str) {
+TOKEN_TYPE getTokenEnum(Config* config, char* str) {
 	TOKEN_TYPE type = TOKEN_UNKOWN;
 
 	printf("Current Token Str: %s\n", str);
@@ -72,9 +105,58 @@ TOKEN_TYPE getTokenEnum(char* str) {
 		type = TOKEN_FILENAME;
 	} else if (!strncmp(str, STR_ELAPSED_TIME, strlen(STR_ELAPSED_TIME))) {
 		type = TOKEN_ELAPSED_TIME;
+	} else {
+		type = getUserToken(config, str);
 	}
 
 	return type;
+}
+
+char* generateOutputStringFromToken(LOGGER log, Config* config, struct mpd_connection* conn, FormatToken* token, int status);
+
+char* getIfNotToken(LOGGER log, struct mpd_connection* conn, Config* config, int status, DecisionToken* token) {
+
+	char* a = generateOutputStringFromToken(log, config, conn, token->a, status);
+	logprintf(log, LOG_DEBUG, "a string: (%s)\n", a);
+	int i;
+	char* out;
+
+	for (i = 0; i < strlen(a); i++) {
+		if (!isspace(a[i])) {
+			out = malloc(1);
+			out[0] = 0;
+			free(a);	
+			return out;
+		}
+	}
+
+	free(a);
+
+	return generateOutputStringFromToken(log, config, conn, token->b, status);
+}
+
+char* getIfToken(LOGGER log, struct mpd_connection* conn, Config* config, int status, DecisionToken* token) {
+
+	char* a = generateOutputStringFromToken(log, config, conn, token->a, status);
+	int i;
+	char* out = NULL;
+
+	logprintf(log, LOG_DEBUG, "a string: (%s)\n", a);
+	for (i = 0; i < strlen(a); i++) {
+		if (!isspace(a[i])) {
+			out = generateOutputStringFromToken(log, config, conn, token->b, status);
+			break;
+		}
+	}
+
+	free(a);
+
+	if (!out) {
+		out = malloc(1);
+		out[0] = 0;
+	}
+
+	return out;
 }
 
 void* getTokenAction(TOKEN_TYPE type) {
@@ -170,8 +252,13 @@ char* generateOutputString(LOGGER log, Config* config, struct mpd_connection* co
 			break;
 	}
 
-	logprintf(log, LOG_DEBUG, "begin output string generation\n");
+	return generateOutputStringFromToken(log, config, conn, token, status);
 
+}
+
+char* generateOutputStringFromToken(LOGGER log, Config* config, struct mpd_connection* conn, FormatToken* token, int status) {
+
+	logprintf(log, LOG_DEBUG, "begin output string generation\n");
 	char* output = malloc(1);
 	output[0] = 0;
 
@@ -180,7 +267,12 @@ char* generateOutputString(LOGGER log, Config* config, struct mpd_connection* co
 		char* args;
 		
 		// text token have the string in the data section. The others have a function in data section.
-		if (token->type != TOKEN_TEXT) {
+		
+		if (token->type == TOKEN_IF) {
+			args = getIfToken(log, conn, config, status, token->data);
+		} else if (token->type == TOKEN_IFNOT) {
+			args = getIfNotToken(log, conn, config, status, token->data);
+		} else if (token->type != TOKEN_TEXT) {
 			
 			char* (*p)(LOGGER log, struct mpd_connection* conn, int status, Config* config) = token->data;
 			if (!p) {
@@ -207,12 +299,36 @@ char* generateOutputString(LOGGER log, Config* config, struct mpd_connection* co
 	return output;
 }
 
-
-FormatToken* buildToken(LOGGER log, TOKEN_TYPE type, void* data) {
+FormatToken* buildToken(LOGGER log, Config* config, TOKEN_TYPE type, char* tokenstr, void* data) {
 	FormatToken* token = malloc(sizeof(FormatToken));
 
-	token->data = data;
 	token->type = type;
+
+	if (token->type == TOKEN_IF || token->type == TOKEN_IFNOT) {
+		DecisionToken* dtoken = config->decTokens;
+		while (dtoken) {
+			if (!strncmp(dtoken->name, tokenstr, strlen(tokenstr))) {
+				token->data = dtoken;
+				break;
+			}
+			dtoken = dtoken->next;
+		}
+
+		if (!dtoken) {
+			logprintf(log, LOG_WARNING, "UserToken not found %s.\n", tokenstr);
+			free(token);
+			return NULL;
+		}
+	} else {
+		if (!data) {
+			logprintf(log, LOG_WARNING, "Unkown token (%d)\n", type);
+			free(data);
+			return NULL;
+		} else {
+			token->data = data;
+		}
+	}
+
 	token->next = NULL;
 
 	return token;
@@ -225,12 +341,6 @@ void freeTokenStruct(LOGGER log, FormatToken* token) {
 	}
 	freeTokenStruct(log, token->next);
 
-	if (!token->type) {
-		logprintf(log, LOG_WARNING, "Type is not set. This should not be happen.\n");
-		free(token);
-		return;
-	}
-
 	if (token->type == TOKEN_TEXT) {
 		logprintf(log, LOG_DEBUG,  "FREE %s\n", token->data);
 		free(token->data);
@@ -238,7 +348,7 @@ void freeTokenStruct(LOGGER log, FormatToken* token) {
 	free(token);
 }
 
-FormatToken* buildTokenStructure(LOGGER log, const char* input) {
+FormatToken* buildTokenStructure(LOGGER log, Config* config, const char* input) {
 
 	logprintf(log, LOG_DEBUG, "build token structure from:%s\n", input);
 
@@ -261,7 +371,7 @@ FormatToken* buildTokenStructure(LOGGER log, const char* input) {
 	while (i < len) {
 		// delimiter for tokens
 		if (format[i] == '%') {
-			tokenstr = getTokenStr(format + i);
+			tokenstr = getTokenStr(config, format + i);
 			logprintf(log, LOG_DEBUG, "Found token: %s\n", tokenstr);
 
 			if (strlen(tokenstr) > 0 ) {
@@ -278,15 +388,15 @@ FormatToken* buildTokenStructure(LOGGER log, const char* input) {
 					logprintf(log, LOG_DEBUG, "found next text token: %s\n", tmp);
 
 					if (!tokens) {
-						tokens = buildToken(log, TOKEN_TEXT, tmp);
+						tokens = buildToken(log, config, TOKEN_TEXT, tokenstr, tmp);
 						next = tokens;
 					} else {
-						next->next = buildToken(log, TOKEN_TEXT, tmp);
+						next->next = buildToken(log, config, TOKEN_TEXT, tokenstr, tmp);
 						next = next->next;
 					}
 				}
 				
-				type = getTokenEnum(tokenstr);
+				type = getTokenEnum(config, tokenstr);
 
 				if (type == TOKEN_UNKOWN) {
 					logprintf(log, LOG_ERROR, "Unkown token (%s).\n", tokenstr);
@@ -295,10 +405,10 @@ FormatToken* buildTokenStructure(LOGGER log, const char* input) {
 				}
 
 				if (!tokens) {
-					tokens = buildToken(log, type, getTokenAction(type));
+					tokens = buildToken(log, config, type, tokenstr, getTokenAction(type));
 					next = tokens;
 				} else {
-					next->next = buildToken(log, type, getTokenAction(type));
+					next->next = buildToken(log, config, type, tokenstr, getTokenAction(type));
 					next = next->next;
 				}
 
@@ -322,11 +432,10 @@ FormatToken* buildTokenStructure(LOGGER log, const char* input) {
 		logprintf(log, LOG_DEBUG, "%s\n", tmp);
 
 		if (!tokens) {
-			tokens = buildToken(log, TOKEN_TEXT, tmp);
+			tokens = buildToken(log, config, TOKEN_TEXT, tokenstr, tmp);
 		} else {
-			next->next = buildToken(log, TOKEN_TEXT, tmp);
+			next->next = buildToken(log, config, TOKEN_TEXT, tokenstr, tmp);
 		}
-
 	}
 	return tokens;
 
