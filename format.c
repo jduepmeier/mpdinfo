@@ -231,7 +231,7 @@ void formatControls(const char* format, char* output) {
 char* generateOutputString(LOGGER log, Config* config, struct mpd_connection* conn) {
 
 	FormatToken* token = NULL;
-	int status = getStatus(log, conn, -1, config);
+	int status = getStatus(config, -1);
 
 	// get right output string
 	switch (status) {
@@ -272,12 +272,12 @@ char* generateOutputStringFromToken(LOGGER log, Config* config, struct mpd_conne
 			args = getIfNotToken(log, conn, config, status, token->data);
 		} else if (token->type != TOKEN_TEXT) {
 			
-			char* (*p)(LOGGER log, struct mpd_connection* conn, int status, Config* config) = token->data;
+			char* (*p)(Config* config, int status) = token->data;
 			if (!p) {
 				logprintf(log, LOG_ERROR, "Function pointer is NULL (token->type = %d)\n", token->type);
 				break;
 			}
-			args = p(log, conn, status, config);
+			args = p(config, status);
 		} else {
 			args = malloc(strlen((char*) token->data) + 1);
 			strcpy(args, token->data);
