@@ -1,6 +1,6 @@
 INSTALLPATH=/usr/local/bin
 CFLAGS=-Wall -lmpdclient
-.PHONY: all debug install
+.PHONY: clean install
 all: mpdinfo
 
 debug: CFLAGS += -g

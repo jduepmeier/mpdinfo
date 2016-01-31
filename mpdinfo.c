@@ -19,9 +19,7 @@
 #include "libs/logger.h"
 #include "libs/easy_config.h"
 
-//#include "parse.h"
 #include "help.h"
-//#include "debug.h"
 #include "format.h"
 #include "status.h"
 #include "mpdinfo.h"
