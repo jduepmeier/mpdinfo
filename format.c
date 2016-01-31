@@ -231,7 +231,7 @@ void formatControls(const char* format, char* output) {
 char* generateOutputString(LOGGER log, Config* config, struct mpd_connection* conn) {
 
 	FormatToken* token = NULL;
-	int status = getStatus(log, conn);
+	int status = getStatus(log, conn, -1, config);
 
 	// get right output string
 	switch (status) {

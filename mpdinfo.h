@@ -1,5 +1,7 @@
 #pragma once
 #include <mpd/client.h>
+#include <mpd/song.h>
+
 #include "format_structure.h"
 #include "libs/logger.h"
 
@@ -27,6 +29,8 @@ struct Config {
 	TokenConfig* tokens;
 	DecisionToken* decTokens;
 	ConnectionInfo* connectionInfo;
+	struct mpd_song* curr_song;
+	struct mpd_status* mpd_status;
 };
 
 void logconfig(LOGGER log, unsigned level, Config* config);

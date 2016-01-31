@@ -164,8 +164,16 @@ int refresh(LOGGER log, Config* config, struct mpd_connection* conn) {
 		mpdinfo_reconnect(log, config, conn);
 	}
 
+	// cache current mpd status and current song info
+	config->curr_song = mpd_run_current_song(conn);
+	config->mpd_status = mpd_run_status(conn);
+	
 	// generate output
 	char* out = generateOutputString(log, config, conn);
+	
+	// and free the cache again
+	mpd_status_free(config->mpd_status);
+	mpd_song_free(config->curr_song);
 	
 	// check for errors
 	if (mpd_connection_get_error(conn) != MPD_ERROR_SUCCESS) {
@@ -515,7 +523,9 @@ int main(int argc, char** argv) {
 		.none = NULL,
 		.tokens = &tokens,
 		.decTokens = NULL,
-		.connectionInfo = &info
+		.connectionInfo = &info,
+		.curr_song = NULL,
+		.mpd_status = NULL
 	};
 
 	//parseArguments(argc, argv);
