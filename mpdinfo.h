@@ -33,12 +33,5 @@ struct Config {
 	struct mpd_status* mpd_status;
 };
 
+// in libs/logger.c
 void logconfig(LOGGER log, unsigned level, Config* config);
-char* getArtist();
-char* getTitle();
-char* getVolumeString();
-int getStatus();
-char* getStatusString();
-int getRepeatStatus();
-char* getRepeatString();
-void getConnection(struct mpd_connection** conn);

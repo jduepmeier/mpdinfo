@@ -3,8 +3,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <signal.h>
-#include <pthread.h>
-#include <sys/wait.h>
+#include <errno.h>
 
 #include <mpd/async.h>
 #include <mpd/status.h>
@@ -59,16 +58,16 @@ int setFormat(int argc, char** argv, void* c) {
 
 	// check if there are empty formats
 	if (!config->play) {
-		config->play = parseTokenString(config->log, config, argv[1]);
+		config->play = parseTokenString(config, argv[1]);
 	}
 	if (!config->pause) {
-		config->pause = parseTokenString(config->log, config, argv[1]);
+		config->pause = parseTokenString(config, argv[1]);
 	}
 	if (!config->stop) {
-		config->stop = parseTokenString(config->log, config, argv[1]);
+		config->stop = parseTokenString(config, argv[1]);
 	}
 	if (!config->none) {
-		config->none = parseTokenString(config->log, config, argv[1]);
+		config->none = parseTokenString(config, argv[1]);
 	}
 	
 	config->format = argv[1];
@@ -79,7 +78,7 @@ int setFormat(int argc, char** argv, void* c) {
 // sets the pause format string from arguments
 int setPauseFormat(int argc, char** argv, void* c) {
 	Config* config = (Config*) c;
-	config->pause = parseTokenString(config->log, config, argv[1]);
+	config->pause = parseTokenString(config, argv[1]);
 
 	return 0;
 }
@@ -87,7 +86,7 @@ int setPauseFormat(int argc, char** argv, void* c) {
 // sets the play format string from arguments
 int setPlayFormat(int argc, char** argv, void* c) {
 	Config* config = (Config*) c;
-	config->play = parseTokenString(config->log, config, argv[1]);
+	config->play = parseTokenString(config, argv[1]);
 
 	return 0;
 }
@@ -95,7 +94,7 @@ int setPlayFormat(int argc, char** argv, void* c) {
 // sets the stop format string from arguments
 int setStopFormat(int argc, char** argv, void* c) {
 	Config* config = (Config*) c;
-	config->stop = parseTokenString(config->log, config, argv[1]);
+	config->stop = parseTokenString(config, argv[1]);
 
 	return 0;
 }
@@ -106,18 +105,18 @@ void setConnection(struct mpd_connection* c) {
 	conn = c;
 }
 
-struct mpd_connection* mpdinfo_connect(LOGGER log, Config* config) {
+struct mpd_connection* mpdinfo_connect(Config* config) {
 	setConnection(NULL);
 	
-	logprintf(log, LOG_INFO, "Trying to connect to: %s:%d\n", config->connectionInfo->host, config->connectionInfo->port);
+	logprintf(config->log, LOG_INFO, "Trying to connect to: %s:%d\n", config->connectionInfo->host, config->connectionInfo->port);
 	struct mpd_connection* conn = mpd_connection_new(config->connectionInfo->host, config->connectionInfo->port, 0);
 
 	if (mpd_connection_get_error(conn) != MPD_ERROR_SUCCESS) {
-		logprintf(log, LOG_ERROR, "%s\n", mpd_connection_get_error_message(conn));
+		logprintf(config->log, LOG_ERROR, "%s\n", mpd_connection_get_error_message(conn));
 		mpd_connection_free(conn);
 		return NULL;
 	}
-	logprintf(log, LOG_INFO, "Connected to %s\n", config->connectionInfo->host);
+	logprintf(config->log, LOG_INFO, "Connected to %s\n", config->connectionInfo->host);
 	
 	// needed for signals
 	setConnection(conn);
@@ -126,31 +125,31 @@ struct mpd_connection* mpdinfo_connect(LOGGER log, Config* config) {
 
 
 // reconnects to mpd
-int mpdinfo_reconnect(LOGGER log, Config* config, struct mpd_connection * conn) {
+int mpdinfo_reconnect(Config* config, struct mpd_connection * conn) {
 	if (conn) {
 		mpd_connection_free(conn);
 	}
-	if ((conn = mpdinfo_connect(log, config))) {
+	if ((conn = mpdinfo_connect(config))) {
 		// check if status is quit
 		if (QUIT) {
 			return 1;
 		} else {
 			// try it later
-			logprintf(log, LOG_WARNING, "Connection lost, reconnection in 5 seconds.\n\f");
+			logprintf(config->log, LOG_WARNING, "Connection lost, reconnection in 5 seconds.\n\f");
 			if (sleep(5) > 0) {
-				logprintf(log, LOG_WARNING, "Sleep interrupted..");
+				logprintf(config->log, LOG_WARNING, "Sleep interrupted..");
 				return 1;
 			}
 			// and try it again
-			mpdinfo_reconnect(log, config, conn);
+			mpdinfo_reconnect(config, conn);
 		}
 	}
 	return 0;
 }
 
 // refresh the output
-int refresh(LOGGER log, Config* config, struct mpd_connection* conn) {
-	logprintf(log, LOG_DEBUG, "Starting refresh.\n");	
+int refresh(Config* config, struct mpd_connection* conn) {
+	logprintf(config->log, LOG_DEBUG, "Starting refresh.\n");	
 
 
 	if (!config) {
@@ -158,8 +157,8 @@ int refresh(LOGGER log, Config* config, struct mpd_connection* conn) {
 	}
 
 	if (!conn) {
-		logprintf(log, LOG_WARNING, "No connection");
-		mpdinfo_reconnect(log, config, conn);
+		logprintf(config->log, LOG_WARNING, "No connection");
+		mpdinfo_reconnect(config, conn);
 	}
 
 	// cache current mpd status and current song info
@@ -170,13 +169,13 @@ int refresh(LOGGER log, Config* config, struct mpd_connection* conn) {
 	if (mpd_connection_get_error(conn) != MPD_ERROR_SUCCESS) {
 		logprintf(config->log, LOG_ERROR, "%s\n", mpd_connection_get_error_message(conn));
 		printf("Connection lost, reconnecting.\n\f");
-		if (mpdinfo_reconnect(log, config, conn)) {
+		if (mpdinfo_reconnect(config, conn)) {
 			return 1;
 		}
-		refresh(log, config, conn);
+		refresh(config, conn);
 	} else {
 		// generate output
-		char* out = generateOutputString(log, config, conn);
+		char* out = generateOutputString(config);
 		// and free the cache again
 		mpd_status_free(config->mpd_status);
 		mpd_song_free(config->curr_song);
@@ -185,9 +184,7 @@ int refresh(LOGGER log, Config* config, struct mpd_connection* conn) {
 		printf("\f%s", out);
 		fflush(stdout);
 		free(out);
-	}
-	
-	
+	}	
 	
 	return 0;
 	
@@ -201,21 +198,21 @@ void force_refresh() {
 }
 
 // main wait function
-void* wait_for_action(LOGGER log, Config* config, struct mpd_connection* conn) {
+void* wait_for_action(Config* config, struct mpd_connection* conn) {
 
-	logprintf(log, LOG_INFO, "letsgo :)\n");
+	logprintf(config->log, LOG_INFO, "letsgo :)\n");
 	do {
 		// refresh output and wait for any change on mpd
-		if (!refresh(log, config, conn)) {
+		if (!refresh(config, conn)) {
 			mpd_run_idle(conn);
-			logprintf(log, LOG_DEBUG, "refresh");
+			logprintf(config->log, LOG_DEBUG, "refresh");
 		}
 	} while (!QUIT);
 
 	// cleaning up
-	logprintf(log, LOG_DEBUG, "Freeing connections.\n");
+	logprintf(config->log, LOG_DEBUG, "Freeing connections.\n");
 	mpd_connection_free(conn);
-	freeTokenStructs(log, config);
+	freeTokenStructs(config);
 	freeTokenConfig(config->tokens);
 	free(config->connectionInfo->host);
 	return 0;
@@ -235,7 +232,7 @@ int setConfigHost(const char* category, char* key, char* value, EConfig* econfig
 	logprintf(config->log, LOG_DEBUG, "Set config host");
 
 	if (!config->connectionInfo) {
-		return 1;	
+		return -1;	
 	}
 			
 	if (config->connectionInfo->host) {
@@ -276,7 +273,7 @@ TokenConfigItem* getTokenConfigItem(const char* cat, Config* config) {
 int setOutputParam(const char* cat, const char* key, const char* value, EConfig* econfig, void* c) {
 	Config* config = (Config*) c;
 
-	FormatToken* token = parseTokenString(config->log, config, value);
+	FormatToken* token = parseTokenString(config, value);
 
 	if (!token) {
 		return -1;
@@ -317,7 +314,7 @@ int setDecisionParam(const char* cat, const char* key, const char* value, EConfi
 
 	if (!config->decTokens) {
 		logprintf(config->log, LOG_ERROR, "Name must be the first entry in decision token.\n");
-		return 1;
+		return -1;
 	}
 
 	if (!strcmp(key, "type")) {
@@ -327,15 +324,39 @@ int setDecisionParam(const char* cat, const char* key, const char* value, EConfi
 			config->decTokens->type = TOKEN_IFNOT;
 		}else {
 			logprintf(config->log, LOG_ERROR, "Unkown token type: %s.\n", value);
-			return 1;
+			return -1;
 		}
 	} else if (!strcmp(key, "a")) {
-		config->decTokens->a = parseTokenString(config->log, config, value);
+		config->decTokens->a = parseTokenString(config, value);
 	} else if (!strcmp(key, "b")) {
-		config->decTokens->b = parseTokenString(config->log, config, value);
+		config->decTokens->b = parseTokenString(config, value);
 	} else {
 		logprintf(config->log, LOG_ERROR, "Unkown key %s in decision token parsing.\n", key);
-		return 1;
+		return -1;
+	}
+
+	return 0;
+}
+
+int setConfigVerbosity(const char* cat, const char* key, const char* value, EConfig* econfig, void* c) {
+	Config* config = (Config*) c;
+
+	config->log.verbosity = strtol(value, NULL, 10);
+
+	return 0;
+}
+
+int setConfigLogfile(const char* cat, const char* key, const char* value, EConfig* econfig, void* c) {
+
+	Config* config = (Config*) c;
+
+	config->log.stream = fopen(value, "a");
+
+	if (!config->log.stream) {
+		config->log.stream = stderr;
+		logprintf(config->log, LOG_ERROR, "Cannot open logfile (%s).\n", strerror(errno));
+
+		return -1;
 	}
 
 	return 0;
@@ -349,7 +370,7 @@ int setTokenParam(const char* cat, const char* key, const char* value, EConfig* 
 
 	if (!item) {
 		logprintf(config->log, LOG_ERROR, "Category (%s) is not a valid token category\n", cat);
-		return 1;
+		return -1;
 	}
 
 	char* val = malloc(strlen(value) + 1);
@@ -405,6 +426,8 @@ int setConfigPath(int argc, char** argv, void* c) {
 
 	econfig_addParam(config, cats[0], "host", setConfigHost);
 	econfig_addParam(config, cats[0], "port", setConfigPort);
+	econfig_addParam(config, cats[0], "verbosity", setConfigVerbosity);
+	econfig_addParam(config, cats[0], "logfile", setConfigLogfile);
 
 	econfig_addParam(config, cats[1], "play", setOutputParam);
 	econfig_addParam(config, cats[1], "pause", setOutputParam);
@@ -430,8 +453,11 @@ int setConfigPath(int argc, char** argv, void* c) {
 	int out = econfig_parse(config);
 	logprintf(prg_config->log, LOG_DEBUG, "Finished parsing config file.\nOutput status is %d\n", out);
 	econfig_free(config);
-
-	return out;
+	if (out < 0) {
+		return -1;
+	} else {
+		return 0;
+	}
 }
 
 // add arguments to the easy_args parser
@@ -494,7 +520,8 @@ int main(int argc, char** argv) {
 
 	LOGGER log = {
 		.stream = stderr,
-		.verbosity = 0
+		.verbosity = 0,
+		.print_timestamp = 1
 	};
 	char* pre_v = getenv("MPDINFO_PRE_VERBOSITY");
 	if (pre_v) {
@@ -528,35 +555,33 @@ int main(int argc, char** argv) {
 		.mpd_status = NULL
 	};
 
-	//parseArguments(argc, argv);
 	addArguments();
 	char* output[argc];
 	if (eargs_parse(argc, argv, output, &config) < 0) {
-		freeTokenStructs(config.log, &config);
+		freeTokenStructs(&config);
 		free(config.connectionInfo->host);
 		return 1;
 	}
 	struct mpd_connection* conn;
-	if ((conn = mpdinfo_connect(config.log, &config)) == NULL) {
+	if (!(conn = mpdinfo_connect(&config))) {
 		logprintf(config.log, LOG_DEBUG, "Freeing structs.\n");
 		cleanDecisionTokens(&config, config.decTokens);
-		freeTokenStructs(config.log, &config);
+		freeTokenStructs(&config);
 		free(config.connectionInfo->host);
 		return -1;
 	}
 
-	//pthread_t pid = 0;
-
-	//pthread_create(&pid, NULL, wait_for_action, NULL);
-
-	//signal(SIGHUP, force_refresh);
 	signal(SIGINT, quit);
 	signal(SIGTERM, quit);
 
 	logconfig(config.log, LOG_DEBUG, &config);
-	wait_for_action(config.log, &config, conn);
+	wait_for_action(&config, conn);
 	
 	cleanDecisionTokens(&config, config.decTokens);
-	//pthread_join(pid, NULL);
+
+	if (config.log.stream != stderr) {
+		fclose(config.log.stream);
+	}
+	printf("Bye...\n");
 	return 0;
 }

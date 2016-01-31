@@ -115,6 +115,7 @@ int eargs_parse(int argc, char** argv, char** output, void* config) {
 
 		// -2 means error in parsing the argument
 		if (v == -2) {
+			eargs_clear();
 			return -2;
 		// -1 means no identifier found for this argument -> add to output list
 		} else if (v < 0) {

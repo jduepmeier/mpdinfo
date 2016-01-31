@@ -1,5 +1,4 @@
 #pragma once
-#include "libs/logger.h"
 
 typedef enum {
 	TOKEN_UNKOWN = -1, 
@@ -57,4 +56,4 @@ typedef struct {
 #define CONFIG_STRUCT 1
 typedef struct Config Config;
 #endif
-FormatToken* parseTokenString(LOGGER log, Config* config, const char* input);
+FormatToken* parseTokenString(Config* config, const char* input);
