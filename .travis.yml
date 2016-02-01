@@ -1,6 +1,6 @@
 language: c
 script: 
-       - ls /usr/lib/mpd*
+       - ls /usr/lib/libmpd*
        - make
 env:
   global:
