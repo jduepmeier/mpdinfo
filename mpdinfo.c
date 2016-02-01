@@ -149,12 +149,11 @@ int mpdinfo_reconnect(Config* config, struct mpd_connection * conn) {
 
 // refresh the output
 int refresh(Config* config, struct mpd_connection* conn) {
-	logprintf(config->log, LOG_DEBUG, "Starting refresh.\n");	
-
-
 	if (!config) {
 		return 1;
 	}
+	
+	logprintf(config->log, LOG_DEBUG, "Starting refresh.\n");	
 
 	if (!conn) {
 		logprintf(config->log, LOG_WARNING, "No connection");
@@ -177,8 +176,14 @@ int refresh(Config* config, struct mpd_connection* conn) {
 		// generate output
 		char* out = generateOutputString(config);
 		// and free the cache again
-		mpd_status_free(config->mpd_status);
-		mpd_song_free(config->curr_song);
+		
+		if (config->mpd_status) {
+			mpd_status_free(config->mpd_status);
+		}
+		
+		if  (config->curr_song) {
+			mpd_song_free(config->curr_song);
+		}
 	
 		// we can print it
 		printf("\f%s", out);
