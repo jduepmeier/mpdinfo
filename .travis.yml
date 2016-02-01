@@ -1,5 +1,7 @@
 language: c
-script: make
+script: 
+       - ls /usr/lib/mpd*
+       - make
 env:
   global:
     # COVERITY_SCAN_TOKEN
