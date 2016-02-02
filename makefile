@@ -6,13 +6,13 @@ all: mpdinfo
 debug: CFLAGS += -g
 debug: mpdinfo
 
-mpdinfo: mpdinfo.c help.c format.c status.c format_structure.c libs/*.c
+mpdinfo: mpdinfo.c help.c format.c status.c libs/*.c
 
 install:
 	install -m 0755 mpdinfo $(INSTALLPATH)
 
 run:
-	valgrind --leak-check=full ./mpdinfo -v 8 -c sample.conf
+	valgrind --leak-check=full ./mpdinfo -c sample.conf -v 8
 
 clean:
 	rm mpdinfo

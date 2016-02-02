@@ -138,6 +138,34 @@ char* getArtist(Config* config, int status) {
 	return getId3Tag(config, status, MPD_TAG_ARTIST);
 }
 
+char* getAlbum(Config* config, int status) {
+	return getId3Tag(config, status, MPD_TAG_ALBUM);
+}
+
+char* getAlbumArtist(Config* config, int status) {
+	return getId3Tag(config, status, MPD_TAG_ALBUM_ARTIST);
+}
+
+char* getGenre(Config* config, int status) {
+	return getId3Tag(config, status, MPD_TAG_GENRE);
+}
+
+char* getTrack(Config* config, int status) {
+	return getId3Tag(config, status, MPD_TAG_TRACK);
+}
+
+char* getDisc(Config* config, int status) {
+	return getId3Tag(config, status, MPD_TAG_DISC);
+}
+
+char* getComment(Config* config, int status) {
+	return getId3Tag(config, status, MPD_TAG_COMMENT);
+}
+
+char* getDate(Config* config, int status) {
+	return getId3Tag(config, status, MPD_TAG_DATE);
+}
+
 char* getFilename(Config* config, int status) {
 	char* out = malloc(1);
 	out[0] = 0;

@@ -6,23 +6,79 @@
 
 #include "mpdinfo.h"
 #include "status.h"
+#include "format.h"
 
 #include "libs/logger.h"
 
-#define STR_ARTIST "%artist%"
-#define STR_TITLE "%title%"
-#define STR_VOLUME "%volume%"
-#define STR_STATUS "%status%"
-#define STR_REPEAT "%repeat%"
-#define STR_DBUPDATE "%dbupdate%"
-#define STR_RANDOM "%random%"
-#define STR_FILENAME "%filename%"
-#define STR_ELAPSED_TIME "%elapsed_time%"
+const MPD_TOKEN MPD_FORMAT_TAGS[] = {
+        [0] = {
+                .name = "text",
+                .action = NULL
+        },
+        [1] = {
+                .name = "if",
+                .action = NULL
+        },
+        [2] = {
+                .name = "ifnot",
+                .action = NULL
+        },
+        {
+                .name = "%artist%",
+                .action = &getArtist
+        },
+        {
+                .name = "%title%",
+                .action = &getTitle
+        },
+        {
+                .name = "%volume%",
+                .action = &getVolume
+        },
+        {
+                .name = "%status%",
+                .action = &getStatusString
+        },
+        {
+                .name = "%repeat%",
+                .action = &getRepeatString
+        },
+        {
+                .name = "%dbupdate%",
+                .action = &getDBUpdateString
+        },
+        {
+                .name = "%random%",
+                .action = &getRandomString
+        },
+        {
+                .name = "%filename%",
+                .action = &getFilename
+        },
+        {
+                .name = "%elapsed_time%",
+                .action = &getElapsedTime
+        },
+        {
+                .name = "%album%",
+                .action = &getAlbum
+        },
+        {
+                .name = "%album_artist%",
+                .action = &getAlbumArtist
+        },
+        {
+                .name = "%genre%",
+                .action = &getGenre
+        },
+        {
+                .name = "%track%",
+                .action = &getTrack
+        }
+};
 
-#define DEFAULT_FORMAT_STRING "Current Track (Vol %volume%%):\n -%status%-\n %artist% - %title%"
-#define DEFAULT_STOPPED_STRING "-stopped-"
 
-char* checkForUserToken(Config* config, char* str) {
+char* getUserTokenString(Config* config, char* str) {
 
 	DecisionToken* token = config->decTokens;
 
@@ -36,81 +92,35 @@ char* checkForUserToken(Config* config, char* str) {
 		token = token->next;
 	}
 
-	return "";
+	return NULL;
 }
 
-
-// translate input string to static string
-char* getTokenStr(Config* config, char* str) {
-	if (!strncmp(str, STR_ARTIST, strlen(STR_ARTIST))) {
-		return STR_ARTIST;
-	} else if (!strncmp(str, STR_TITLE, strlen(STR_TITLE))) {
-		return STR_TITLE;
-	} else if (!strncmp(str, STR_VOLUME, strlen(STR_VOLUME))) {
-		return STR_VOLUME;
-	} else if (!strncmp(str, STR_STATUS, strlen(STR_STATUS))) {
-		return STR_STATUS;
-	} else if (!strncmp(str, STR_REPEAT, strlen(STR_REPEAT))) {
-		return STR_REPEAT;
-	} else if(!strncmp(str, STR_FILENAME, strlen(STR_FILENAME))) {
-		return STR_FILENAME;
-	} else if (!strncmp(str, STR_DBUPDATE, strlen(STR_DBUPDATE))) {
-		return STR_DBUPDATE;
-	} else if (!strncmp(str, STR_RANDOM, strlen(STR_RANDOM))) {
-		return STR_RANDOM;
-	} else if (!strncmp(str, STR_ELAPSED_TIME, strlen(STR_ELAPSED_TIME))) {
-		return STR_ELAPSED_TIME;
-	}
-
-	return checkForUserToken(config, str);
-}
-
-TOKEN_TYPE getUserToken(Config* config, char* str) {
+const MPD_TOKEN* getUserToken(Config* config, char* str) {
 
 	DecisionToken* token = config->decTokens;
-	TOKEN_TYPE type = TOKEN_UNKOWN;	
-		
 	while(token) {
 
 		if (!strncmp(str, token->name, strlen(token->name))) {
-			type = token->type;
-			break;
+			return token->type;
 		}
 
 		token = token->next;
 	}
 
-	return type;
+	return NULL;
 }
 	
-TOKEN_TYPE getTokenEnum(Config* config, char* str) {
-	TOKEN_TYPE type = TOKEN_UNKOWN;
-
+const MPD_TOKEN* getMPDToken(Config* config, char* str) {
 	logprintf(config->log, LOG_INFO, "Current Token Str: %s\n", str);
 
-	if (!strncmp(str, STR_ARTIST, strlen(STR_ARTIST))) {
-		type = TOKEN_ARTIST;
-	} else if (!strncmp(str, STR_TITLE, strlen(STR_TITLE))) {
-		type = TOKEN_TITLE;
-	} else if (!strncmp(str, STR_VOLUME, strlen(STR_VOLUME))) {
-		type = TOKEN_VOLUME;
-	} else if (!strncmp(str, STR_STATUS, strlen(STR_STATUS))) {
-		type = TOKEN_STATUS;
-	} else if (!strncmp(str, STR_REPEAT, strlen(STR_REPEAT))) {
-		type = TOKEN_REPEAT;
-	} else if (!strncmp(str, STR_DBUPDATE, strlen(STR_DBUPDATE))) {
-                type = TOKEN_DBUPDATE;
-        } else if (!strncmp(str, STR_RANDOM, strlen(STR_RANDOM))) {
-                type = TOKEN_RANDOM;
-        } else if (!strncmp(str, STR_FILENAME, strlen(STR_FILENAME))) {
-		type = TOKEN_FILENAME;
-	} else if (!strncmp(str, STR_ELAPSED_TIME, strlen(STR_ELAPSED_TIME))) {
-		type = TOKEN_ELAPSED_TIME;
-	} else { // no standard token found. Maybe a user token
-		type = getUserToken(config, str);
+	unsigned i;
+	for (i = 0; i < sizeof(MPD_TOKEN); i++) {
+		if (!strncmp(str, MPD_FORMAT_TAGS[i].name, strlen(MPD_FORMAT_TAGS[i].name))) {
+			return &MPD_FORMAT_TAGS[i];
+		}
 	}
 
-	return type;
+	return getUserToken(config, str);
 }
 
 char* generateOutputStringFromToken(Config* config, FormatToken* token, int status);
@@ -158,33 +168,6 @@ char* getIfToken(Config* config, int status, DecisionToken* token) {
 	}
 
 	return out;
-}
-
-void* getTokenAction(TOKEN_TYPE type) {
-
-	switch (type) {
-
-		case TOKEN_ARTIST:
-			return &getArtist;
-		case TOKEN_TITLE:
-			return &getTitle;
-		case TOKEN_FILENAME:
-			return &getFilename;
-		case TOKEN_REPEAT:
-			return &getRepeatString;
-		case TOKEN_VOLUME:
-			return &getVolumeString;
-		case TOKEN_STATUS:
-			return &getStatusString;
-		case TOKEN_DBUPDATE:
-			return &getDBUpdateString;
-		case TOKEN_RANDOM:
-			return &getRandomString;
-		case TOKEN_ELAPSED_TIME:
-			return &getElapsedTime;
-		default:
-			return NULL;
-	}
 }
 
 // parse special characters
@@ -269,29 +252,35 @@ char* generateOutputStringFromToken(Config* config, FormatToken* token, int stat
 		
 		// text token have the string in the data section. The others have a function in data section.
 		
-		if (token->type == TOKEN_IF) {
-			args = getIfToken(config, status, token->data);
-		} else if (token->type == TOKEN_IFNOT) {
-			args = getIfNotToken(config, status, token->data);
-		} else if (token->type != TOKEN_TEXT) {
+		if (token->type == &MPD_FORMAT_TAGS[TOKEN_IF]) {
 			
-			char* (*p)(Config* config, int status) = token->data;
+			logprintf(config->log, LOG_DEBUG, "Found if token\n");
+			args = getIfToken(config, status, token->data);
+		} else if (token->type == &MPD_FORMAT_TAGS[TOKEN_IF_NOT]) {
+			logprintf(config->log, LOG_DEBUG, "Found if not token\n");
+			args = getIfNotToken(config, status, token->data);
+		} else if (token->type != &MPD_FORMAT_TAGS[TOKEN_TEXT]) {
+			logprintf(config->log, LOG_DEBUG, "Found %s token\n", token->type->name);	
+			char* (*p)(Config* config, int status) = token->type->action;
 			if (!p) {
 				logprintf(config->log, LOG_ERROR, "Function pointer is NULL (token->type = %d)\n", token->type);
 				break;
 			}
 			args = p(config, status);
 		} else {
+			logprintf(config->log, LOG_DEBUG, "Found text token\n");
 			args = malloc(strlen((char*) token->data) + 1);
-			strcpy(args, token->data);
+			strncpy(args, token->data, strlen((char*) token->data) + 1);
 		}
-
-		logprintf(config->log, LOG_DEBUG, "%s\n", args);
-		next = malloc(strlen(output) + strlen(args) + 1);
-		sprintf(next, "%s%s", output, args);
+		if (!args) {
+			logprintf(config->log, LOG_WARNING, "args not defined.\n");
+		} else {
+			logprintf(config->log, LOG_DEBUG, "%s\n", args);
+			next = malloc(strlen(output) + strlen(args) + 1);
+			sprintf(next, "%s%s", output, args);
 		
-		free(args);
-
+			free(args);
+		}
 		free(output);
 		output = next;
 		token = token->next;
@@ -300,12 +289,12 @@ char* generateOutputStringFromToken(Config* config, FormatToken* token, int stat
 	return output;
 }
 
-FormatToken* buildToken(Config* config, TOKEN_TYPE type, char* tokenstr, void* data) {
+FormatToken* buildToken(Config* config, const MPD_TOKEN* type, char* tokenstr, void* data) {
 	FormatToken* token = malloc(sizeof(FormatToken));
 
 	token->type = type;
 
-	if (token->type == TOKEN_IF || token->type == TOKEN_IFNOT) {
+	if (token->type == &MPD_FORMAT_TAGS[TOKEN_IF] || token->type == &MPD_FORMAT_TAGS[TOKEN_IF_NOT]) {
 		DecisionToken* dtoken = config->decTokens;
 		while (dtoken) {
 			if (!strncmp(dtoken->name, tokenstr, strlen(tokenstr))) {
@@ -343,12 +332,24 @@ void freeTokenStruct(LOGGER log, FormatToken* token) {
 	}
 	freeTokenStruct(log, token->next);
 
-	if (token->type == TOKEN_TEXT) {
+	if (token->type == &MPD_FORMAT_TAGS[TOKEN_TEXT]) {
 		logprintf(log, LOG_DEBUG,  "FREE %s\n", token->data);
 		free(token->data);
 	}
 	free(token);
 }
+
+char* getTokenName(Config* config, char* str) {
+	int i;
+	for (i = 0; i < sizeof(MPD_TOKEN); i++) {
+		if (!strncmp(str, MPD_FORMAT_TAGS[i].name, strlen(MPD_FORMAT_TAGS[i].name))) {
+			return MPD_FORMAT_TAGS[i].name;
+		}
+	}
+
+	return getUserTokenString(config, str);
+}
+
 
 FormatToken* buildTokenStructure(Config* config, const char* input) {
 
@@ -364,8 +365,8 @@ FormatToken* buildTokenStructure(Config* config, const char* input) {
 
 	char* current = format;
 	char* tmp;
-	char* tokenstr;
-	TOKEN_TYPE type;
+	char* token_name;
+	MPD_TOKEN* mpdToken;
 
 	int len = strlen(format);
 
@@ -373,10 +374,10 @@ FormatToken* buildTokenStructure(Config* config, const char* input) {
 	while (i < len) {
 		// delimiter for tokens
 		if (format[i] == '%') {
-			tokenstr = getTokenStr(config, format + i);
-			logprintf(config->log, LOG_DEBUG, "Found token: %s\n", tokenstr);
-
-			if (strlen(tokenstr) > 0 ) {
+			mpdToken = (MPD_TOKEN*) getMPDToken(config, format + i);
+			token_name = getTokenName(config, format + i);
+			if (mpdToken && token_name) {
+				logprintf(config->log, LOG_DEBUG, "Found token: %s\n", format + i + 1);
 				// check for text token
 				if (current != (format + i)) {
 
@@ -390,35 +391,35 @@ FormatToken* buildTokenStructure(Config* config, const char* input) {
 					logprintf(config->log, LOG_DEBUG, "found next text token: %s\n", tmp);
 
 					if (!tokens) {
-						tokens = buildToken(config, TOKEN_TEXT, tokenstr, tmp);
+						tokens = buildToken(config, &MPD_FORMAT_TAGS[TOKEN_TEXT], mpdToken->name, tmp);
 						next = tokens;
 					} else {
-						next->next = buildToken(config, TOKEN_TEXT, tokenstr, tmp);
-						next = next->next;
+						next->next = buildToken(config, &MPD_FORMAT_TAGS[TOKEN_TEXT], mpdToken->name, tmp);
+						if (next->next) {
+							next = next->next;
+						}
 					}
-				}
-				
-				type = getTokenEnum(config, tokenstr);
-
-				if (type == TOKEN_UNKOWN) {
-					logprintf(config->log, LOG_ERROR, "Unkown token (%s).\n", tokenstr);
-					freeTokenStruct(config->log, tokens);
-					return NULL;
 				}
 
 				if (!tokens) {
-					tokens = buildToken(config, type, tokenstr, getTokenAction(type));
+					tokens = buildToken(config, mpdToken, mpdToken->name, mpdToken->action);
 					next = tokens;
 				} else {
-					next->next = buildToken(config, type, tokenstr, getTokenAction(type));
-					next = next->next;
+
+					next->next = buildToken(config, mpdToken, mpdToken->name, mpdToken->action);
+					
+					if (next->next) {
+						next = next->next;
+					}
 				}
 
-				// increment counter with size of tokenstr
-				i += strlen(tokenstr);
+				i += strlen(token_name);
+				logprintf(config->log, LOG_DEBUG, "rest string (%s), name: (%s)\n", format + i, token_name);
 				current = format + i;
 			} else {
-				i++;
+				logprintf(config->log, LOG_ERROR, "Unkown token (%s).\n", format + i);
+				freeTokenStruct(config->log, tokens);
+				return NULL;
 			}
 		} else {
 			i++;
@@ -434,9 +435,9 @@ FormatToken* buildTokenStructure(Config* config, const char* input) {
 		logprintf(config->log, LOG_DEBUG, "%s\n", tmp);
 
 		if (!tokens) {
-			tokens = buildToken(config, TOKEN_TEXT, tokenstr, tmp);
+			tokens = buildToken(config, &MPD_FORMAT_TAGS[TOKEN_TEXT], mpdToken->name, tmp);
 		} else {
-			next->next = buildToken(config, TOKEN_TEXT, tokenstr, tmp);
+			next->next = buildToken(config, &MPD_FORMAT_TAGS[TOKEN_TEXT], mpdToken->name, tmp);
 		}
 	}
 	return tokens;
@@ -483,3 +484,13 @@ void freeTokenConfig(TokenConfig* config) {
 	freeTokenConfigItem(config->dbupdate);
 
 }
+
+FormatToken* parseTokenString(Config* config, const char* input) {
+	if (!input || !strcmp(input, "")) {
+		logprintf(config->log, LOG_WARNING, "Empty input string in token parsing.\n");
+		return NULL;
+	}
+
+	return buildTokenStructure(config, input);
+}
+

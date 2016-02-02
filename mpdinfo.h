@@ -2,8 +2,9 @@
 #include <mpd/client.h>
 #include <mpd/song.h>
 
-#include "format_structure.h"
 #include "libs/logger.h"
+
+#include "format.h"
 
 typedef struct {
 	char* host;

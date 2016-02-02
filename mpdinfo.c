@@ -13,7 +13,6 @@
 #include <mpd/tag.h>
 #include <mpd/client.h>
 
-
 #include "libs/easy_args.h"
 #include "libs/logger.h"
 #include "libs/easy_config.h"
@@ -125,39 +124,44 @@ struct mpd_connection* mpdinfo_connect(Config* config) {
 
 
 // reconnects to mpd
-int mpdinfo_reconnect(Config* config, struct mpd_connection * conn) {
-	if (conn) {
-		mpd_connection_free(conn);
-	}
-	if ((conn = mpdinfo_connect(config))) {
+struct mpd_connection* mpdinfo_reconnect(Config* config) {
+	struct mpd_connection* conn = NULL;
+
+	while (!conn) {
 		// check if status is quit
 		if (QUIT) {
-			return 1;
+			logprintf(config->log, LOG_INFO, "Quitting.\n");
+			return NULL;
 		} else {
 			// try it later
 			logprintf(config->log, LOG_WARNING, "Connection lost, reconnection in 5 seconds.\n\f");
 			if (sleep(5) > 0) {
 				logprintf(config->log, LOG_WARNING, "Sleep interrupted..");
-				return 1;
+				return NULL;
 			}
-			// and try it again
-			mpdinfo_reconnect(config, conn);
+			conn = mpdinfo_connect(config);
 		}
 	}
-	return 0;
+	return conn;
 }
 
 // refresh the output
-int refresh(Config* config, struct mpd_connection* conn) {
+struct mpd_connection* refresh(Config* config, struct mpd_connection* conn) {
 	if (!config) {
-		return 1;
+		return NULL;
 	}
 	
 	logprintf(config->log, LOG_DEBUG, "Starting refresh.\n");	
 
-	if (!conn) {
+	if (conn == NULL) {
 		logprintf(config->log, LOG_WARNING, "No connection");
-		mpdinfo_reconnect(config, conn);
+		
+		
+		conn = mpdinfo_reconnect(config);
+
+		if (!conn) {
+			return NULL;
+		}
 	}
 
 	// cache current mpd status and current song info
@@ -168,10 +172,12 @@ int refresh(Config* config, struct mpd_connection* conn) {
 	if (mpd_connection_get_error(conn) != MPD_ERROR_SUCCESS) {
 		logprintf(config->log, LOG_ERROR, "%s\n", mpd_connection_get_error_message(conn));
 		printf("Connection lost, reconnecting.\n\f");
-		if (mpdinfo_reconnect(config, conn)) {
-			return 1;
+		mpd_connection_free(conn);
+		conn = mpdinfo_reconnect(config);
+		if (!conn) {
+			return NULL;
 		}
-		refresh(config, conn);
+		return refresh(config, conn);
 	} else {
 		// generate output
 		char* out = generateOutputString(config);
@@ -184,14 +190,14 @@ int refresh(Config* config, struct mpd_connection* conn) {
 		if  (config->curr_song) {
 			mpd_song_free(config->curr_song);
 		}
-	
+
 		// we can print it
 		printf("\f%s", out);
 		fflush(stdout);
 		free(out);
-	}	
+	}
 	
-	return 0;
+	return conn;
 	
 }
 
@@ -208,7 +214,8 @@ void* wait_for_action(Config* config, struct mpd_connection* conn) {
 	logprintf(config->log, LOG_INFO, "letsgo :)\n");
 	do {
 		// refresh output and wait for any change on mpd
-		if (!refresh(config, conn)) {
+		conn = refresh(config, conn);
+		if (conn) {
 			mpd_run_idle(conn);
 			logprintf(config->log, LOG_DEBUG, "refresh");
 		}
@@ -216,7 +223,9 @@ void* wait_for_action(Config* config, struct mpd_connection* conn) {
 
 	// cleaning up
 	logprintf(config->log, LOG_DEBUG, "Freeing connections.\n");
-	mpd_connection_free(conn);
+	if (conn) {
+		mpd_connection_free(conn);
+	}
 	freeTokenStructs(config);
 	freeTokenConfig(config->tokens);
 	free(config->connectionInfo->host);
@@ -307,7 +316,7 @@ int setDecisionParam(const char* cat, const char* key, const char* value, EConfi
 		DecisionToken* dt = config->decTokens;
 		config->decTokens = malloc(sizeof(DecisionToken));
 		config->decTokens->next = dt;
-		config->decTokens->type = -1;
+		config->decTokens->type = NULL;
 		config->decTokens->name = malloc(strlen(value) + 1);
 		strncpy(config->decTokens->name, value, strlen(value) + 1);
 
@@ -324,9 +333,9 @@ int setDecisionParam(const char* cat, const char* key, const char* value, EConfi
 
 	if (!strcmp(key, "type")) {
 		if (!strcmp(value, "IF") || !strcmp(value, "if")) {
-			config->decTokens->type = TOKEN_IF;
+			config->decTokens->type = &MPD_FORMAT_TAGS[TOKEN_IF];
 		} else if (!strcmp(value, "IFNOT") || !strcmp(value, "ifnot")) {
-			config->decTokens->type = TOKEN_IFNOT;
+			config->decTokens->type = &MPD_FORMAT_TAGS[TOKEN_IF_NOT];
 		}else {
 			logprintf(config->log, LOG_ERROR, "Unkown token type: %s.\n", value);
 			return -1;
