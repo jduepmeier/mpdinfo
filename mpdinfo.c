@@ -508,17 +508,10 @@ void cleanDecisionTokens(Config* config, DecisionToken* token) {
 
 	cleanDecisionTokens(config, token->next);
 
-	if (token->a) {
-		freeTokenStruct(config->log, token->a);
-	}
-
-	if (token->b) {
-		freeTokenStruct(config->log, token->b);
-	}
-
-	if (token->name) {
-		free(token->name);
-	}
+	freeTokenStruct(config->log, token->a);
+	freeTokenStruct(config->log, token->b);
+	free(token->name);
+	
 	free(token);
 }
 
