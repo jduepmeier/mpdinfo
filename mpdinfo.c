@@ -153,7 +153,7 @@ struct mpd_connection* refresh(Config* config, struct mpd_connection* conn) {
 	
 	logprintf(config->log, LOG_DEBUG, "Starting refresh.\n");	
 
-	if (conn == NULL) {
+	if (!conn) {
 		logprintf(config->log, LOG_WARNING, "No connection");
 		
 		
@@ -311,6 +311,7 @@ int setDecisionParam(const char* cat, const char* key, const char* value, EConfi
 
 	Config* config = (Config*) c;
 
+	// every decision token needs a name
 	if (!strcmp(key, "name")) {
 
 		DecisionToken* dt = config->decTokens;
@@ -331,6 +332,7 @@ int setDecisionParam(const char* cat, const char* key, const char* value, EConfi
 		return -1;
 	}
 
+	// check type
 	if (!strcmp(key, "type")) {
 		if (!strcmp(value, "IF") || !strcmp(value, "if")) {
 			config->decTokens->type = &MPD_FORMAT_TAGS[TOKEN_IF];
@@ -340,8 +342,10 @@ int setDecisionParam(const char* cat, const char* key, const char* value, EConfi
 			logprintf(config->log, LOG_ERROR, "Unkown token type: %s.\n", value);
 			return -1;
 		}
+	// string for checking
 	} else if (!strcmp(key, "a")) {
 		config->decTokens->a = parseTokenString(config, value);
+	// output string
 	} else if (!strcmp(key, "b")) {
 		config->decTokens->b = parseTokenString(config, value);
 	} else {
@@ -352,6 +356,7 @@ int setDecisionParam(const char* cat, const char* key, const char* value, EConfi
 	return 0;
 }
 
+// Set verbosity from config file
 int setConfigVerbosity(const char* cat, const char* key, const char* value, EConfig* econfig, void* c) {
 	Config* config = (Config*) c;
 
@@ -360,12 +365,14 @@ int setConfigVerbosity(const char* cat, const char* key, const char* value, ECon
 	return 0;
 }
 
+// Set logfile from config file
 int setConfigLogfile(const char* cat, const char* key, const char* value, EConfig* econfig, void* c) {
 
 	Config* config = (Config*) c;
 
 	config->log.stream = fopen(value, "a");
 
+	// can we open log file?
 	if (!config->log.stream) {
 		config->log.stream = stderr;
 		logprintf(config->log, LOG_ERROR, "Cannot open logfile (%s).\n", strerror(errno));
@@ -376,6 +383,7 @@ int setConfigLogfile(const char* cat, const char* key, const char* value, EConfi
 	return 0;
 }
 
+// Sets a token parameter from config file
 int setTokenParam(const char* cat, const char* key, const char* value, EConfig* econfig, void* c) {
 	
 	Config* config = (Config*) c;
@@ -388,37 +396,29 @@ int setTokenParam(const char* cat, const char* key, const char* value, EConfig* 
 	}
 
 	char* val = malloc(strlen(value) + 1);
-	//strcpy(val, value);
 
+	// replace special chars
 	formatControls(value, val);
 
 	if (!strcmp(key, "play")) {
-		if (item->play) {
-			free(item->play);
-		}
+		free(item->play);
 		item->play = val;
 	} else if (!strcmp(key, "pause")) {
-		if (item->pause) {
-			free(item->pause);
-		}
+		free(item->pause);
 		item->pause = val;
 	} else if (!strcmp(key, "stop")) {
-		if (item->stop) {
-			free(item->stop);
-		}
+		free(item->stop);
 		item->stop = val;
 	} else if (!strcmp(key, "none")) {
-		if (item->none) {
-			free(item->none);
-		}
+		free(item->none);
 		item->none = val;
 	} else if (!strcmp(key, "off")) {
-		if (item->off) {
-			free(item->off);
-		}
+		free(item->off);
 		item->off = val;
 	} else {
+		logprintf(config->log, LOG_ERROR, "Not a valid key (%s) in token param parsing.\n", key);
 		free(val);
+		return -1;
 	}
 
 	return 0;
@@ -431,6 +431,7 @@ int setConfigPath(int argc, char** argv, void* c) {
 	
 	unsigned cats[6];
 
+	// Setup valid categories
 	cats[0] = econfig_addCategory(config, "general");
 	cats[1] = econfig_addCategory(config, "output");
 	cats[2] = econfig_addCategory(config, "token_repeat");
@@ -438,6 +439,7 @@ int setConfigPath(int argc, char** argv, void* c) {
 	cats[4] = econfig_addCategory(config, "token_dbupdate");
 	cats[5] = econfig_addCategory(config, "token_decision");
 
+	// Setup valid parameters to the categories
 	econfig_addParam(config, cats[0], "host", setConfigHost);
 	econfig_addParam(config, cats[0], "port", setConfigPort);
 	econfig_addParam(config, cats[0], "verbosity", setConfigVerbosity);
@@ -449,6 +451,7 @@ int setConfigPath(int argc, char** argv, void* c) {
 	econfig_addParam(config, cats[1], "stop", setOutputParam);
 
 
+	// Tokens have the same parameters
 	int i;
 	for (i = 2; i < 5; i++) {
 		econfig_addParam(config, cats[i], "play", setTokenParam);
@@ -458,6 +461,7 @@ int setConfigPath(int argc, char** argv, void* c) {
 		econfig_addParam(config, cats[i], "off", setTokenParam);
 	}
 
+	// Setup decision token parameter
 	econfig_addParam(config, cats[5], "name", setDecisionParam);
 	econfig_addParam(config, cats[5], "type", setDecisionParam);
 	econfig_addParam(config, cats[5], "a", setDecisionParam);
@@ -477,14 +481,16 @@ int setConfigPath(int argc, char** argv, void* c) {
 // add arguments to the easy_args parser
 int addArguments() {
 
-	eargs_addArgument("-v", "--verbosity", setVerbosity, 1);
-	eargs_addArgument("-h", "--help", usage, 0);
+	// Setup command line arguments
 	eargs_addArgument("-c", "--config", setConfigPath, 1);
-	eargs_addArgument("-h", "--host", setHost, 1);
-	eargs_addArgument("-p", "--port", setPort, 1);
-	eargs_addArgument("-fpl", "--format=play", setPlayFormat, 1);
+	eargs_addArgument("-f", "--format", setFormat, 1);	
 	eargs_addArgument("-fpa", "--format=pause", setPauseFormat, 1);
+	eargs_addArgument("-fpl", "--format=play", setPlayFormat, 1);
 	eargs_addArgument("-fs", "--format=stop", setStopFormat, 1);
+	eargs_addArgument("-h", "--host", setHost, 1);
+	eargs_addArgument("-hp", "--help", usage, 0);
+	eargs_addArgument("-p", "--port", setPort, 1);
+	eargs_addArgument("-v", "--verbosity", setVerbosity, 1);
 
 	return 0;
 }
@@ -522,9 +528,6 @@ int main(int argc, char** argv) {
 		.port = 6600
 	};
 
-	info.host = malloc(strlen("localhost") + 1);
-	strcpy(info.host, "localhost");
-
 	LOGGER log = {
 		.stream = stderr,
 		.verbosity = 0,
@@ -534,6 +537,24 @@ int main(int argc, char** argv) {
 	if (pre_v) {
 		log.verbosity = strtoul(pre_v, NULL, 10);
 	}
+
+	char* env_host = getenv("MPD_HOST");
+
+	if (!env_host) {
+		info.host = malloc(strlen("localhost") + 1);
+		strcpy(info.host, "localhost");
+	} else {
+		info.host = malloc(strlen(env_host) + 1);
+		strncpy(info.host, env_host, strlen(env_host) + 1);
+		logprintf(log, LOG_INFO, "Using env variable host: %s\n", info.host);
+	}
+
+	char* env_port = getenv("MPD_PORT");
+	if (env_port) {
+		info.port = strtoul(env_port, NULL, 10);
+		logprintf(log, LOG_INFO, "Using env variable port: %d\n", info.port);
+	}
+	
 	
 	logprintf(log, LOG_DEBUG, "Finished connection info. Host=%s, Port=%d\n", info.host, info.port);
 

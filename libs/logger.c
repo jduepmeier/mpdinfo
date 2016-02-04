@@ -23,9 +23,9 @@ int common_tprintf(char* format, time_t time, char* buffer, size_t buffer_length
 void logFormatToken(LOGGER log, unsigned level, FormatToken* token) {
 
 	while (token) {
-		logprintf(log, level, "\ttype: %d\n", token->type);
+		logprintf(log, level, "\ttype: %s\n", token->type->name);
 
-		if (token->type == TOKEN_TEXT) {
+		if (token->type == &MPD_FORMAT_TAGS[TOKEN_TEXT]) {
 			logprintf(log, level, "\tdata: %s\n", token->data);
 		}
 		token = token->next;
