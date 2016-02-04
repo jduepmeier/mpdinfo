@@ -33,7 +33,7 @@ const MPD_TOKEN MPD_FORMAT_TAGS[] = {
         },
         {
                 .name = "%volume%",
-                .action = &getVolume
+                .action = &getVolumeString
         },
         {
                 .name = "%status%",
@@ -417,9 +417,10 @@ FormatToken* buildTokenStructure(Config* config, const char* input) {
 				logprintf(config->log, LOG_DEBUG, "rest string (%s), name: (%s)\n", format + i, token_name);
 				current = format + i;
 			} else {
-				logprintf(config->log, LOG_ERROR, "Unkown token (%s).\n", format + i);
-				freeTokenStruct(config->log, tokens);
-				return NULL;
+				//logprintf(config->log, LOG_ERROR, "Unkown token (%s).\n", format + i);
+				//freeTokenStruct(config->log, tokens);
+				//return NULL;
+				i++;
 			}
 		} else {
 			i++;
@@ -435,9 +436,9 @@ FormatToken* buildTokenStructure(Config* config, const char* input) {
 		logprintf(config->log, LOG_DEBUG, "%s\n", tmp);
 
 		if (!tokens) {
-			tokens = buildToken(config, &MPD_FORMAT_TAGS[TOKEN_TEXT], mpdToken->name, tmp);
+			tokens = buildToken(config, &MPD_FORMAT_TAGS[TOKEN_TEXT], "text", tmp);
 		} else {
-			next->next = buildToken(config, &MPD_FORMAT_TAGS[TOKEN_TEXT], mpdToken->name, tmp);
+			next->next = buildToken(config, &MPD_FORMAT_TAGS[TOKEN_TEXT], "text", tmp);
 		}
 	}
 	return tokens;
