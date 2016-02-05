@@ -281,13 +281,13 @@ char* generateOutputStringFromToken(Config* config, FormatToken* token, int stat
 }
 
 FormatToken* buildToken(Config* config, const MPD_TOKEN* type, char* tokenstr, void* data) {
-	FormatToken* token = malloc(sizeof(FormatToken));
-	token->data = NULL;
 
 	if (!type) {
 		logprintf(config->log, LOG_WARNING, "type is null.\n");
 		return NULL;
 	}
+	FormatToken* token = malloc(sizeof(FormatToken));
+	token->data = NULL;
 
 	token->type = type;
 
