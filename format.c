@@ -284,6 +284,11 @@ FormatToken* buildToken(Config* config, const MPD_TOKEN* type, char* tokenstr, v
 	FormatToken* token = malloc(sizeof(FormatToken));
 	token->data = NULL;
 
+	if (!type) {
+		logprintf(config->log, LOG_WARNING, "type is null.\n");
+		return NULL;
+	}
+
 	token->type = type;
 
 	// check for user tokens
@@ -307,13 +312,7 @@ FormatToken* buildToken(Config* config, const MPD_TOKEN* type, char* tokenstr, v
 			return NULL;
 		}
 	} else {
-		if (!type) {
-			logprintf(config->log, LOG_WARNING, "Unkown token (%s)\n", type->name);
-			free(token);
-			return NULL;
-		} else {
-			token->data = data;
-		}
+		token->data = data;
 	}
 
 	token->next = NULL;
