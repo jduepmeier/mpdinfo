@@ -383,6 +383,7 @@ FormatToken* buildTokenStructure(Config* config, const char* input) {
 
 
 		if (!currToken) {
+			freeTokenStruct(config->log, out);
 			return NULL;
 		}
 
@@ -412,6 +413,7 @@ FormatToken* buildTokenStructure(Config* config, const char* input) {
 	currToken = nextBuildToken(config, last, strlen(last));
 
 	if (!currToken) {
+		freeTokenStruct(config->log, out);
 		return NULL;
 	}
 
