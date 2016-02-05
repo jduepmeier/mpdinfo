@@ -233,9 +233,11 @@ char* generateOutputStringFromToken(Config* config, FormatToken* token, int stat
 	char* output = malloc(1);
 	output[0] = 0;
 
+	unsigned len_out = 0;
+	unsigned len_args = 0;
+	char* args;
+
 	while(token) {
-		char* next;
-		char* args;
 		
 		// text token have the string in the data section. The others have a function in data section.
 		
@@ -259,17 +261,19 @@ char* generateOutputStringFromToken(Config* config, FormatToken* token, int stat
 			args = malloc(strlen((char*) token->data) + 1);
 			strncpy(args, token->data, strlen((char*) token->data) + 1);
 		}
-		if (!args) {
-			logprintf(config->log, LOG_WARNING, "args not defined.\n");
-		} else {
-			logprintf(config->log, LOG_DEBUG, "%s\n", args);
-			next = malloc(strlen(output) + strlen(args) + 1);
-			sprintf(next, "%s%s", output, args);
 		
+		if (args) {
+			logprintf(config->log, LOG_DEBUG, "%s\n", args);
+			len_args = strlen(args);
+			output = realloc(output, len_out + strlen(args) + 1);
+			strncpy(output + len_out, args, len_args + 1);
+			len_out += len_args;
+
 			free(args);
+		} else {
+			logprintf(config->log, LOG_INFO, "args not defined.\n");
+
 		}
-		free(output);
-		output = next;
 		token = token->next;
 	}
 
