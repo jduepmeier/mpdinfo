@@ -3,7 +3,6 @@
 #include <mpd/tag.h>
 
 #include "mpdinfo.h"
-//#include "parse.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -200,16 +199,7 @@ char* getFilename(Config* config, int status) {
 	return out;
 }
 
-char* getElapsedTime(Config* config, int status) {
-
-	char* out = malloc(1);
-	out[0] = 0;
-	
-	if (!config->mpd_status) {
-		return out;
-	}
-
-	unsigned time = mpd_status_get_elapsed_time(config->mpd_status);
+char* timeToString(Config* config, unsigned time) {
 
 	unsigned sec;
 	unsigned min;
@@ -217,15 +207,66 @@ char* getElapsedTime(Config* config, int status) {
 	sec = time % 60;
 	min = time / 60;
 
-	free(out);
-
 	int length = snprintf(NULL, 0, "%d:%02d", min, sec) + 1;
-	out = malloc(length);
-
+	char* out = malloc(length);
 	snprintf(out, length, "%d:%02d", min, sec);
 
-	return out; 
+	return out;
 }
+
+char* getElapsedTime(Config* config, int status) {
+
+	if (!config->mpd_status) {
+		char* out = malloc(1);
+		out[0] = 0;
+		return out;
+	}
+
+	unsigned time = mpd_status_get_elapsed_time(config->mpd_status);
+
+	return timeToString(config, time); 
+}
+
+char* getDuration(Config* config, int status) {
+	if (!config->mpd_status) {
+		char* out = malloc(1);
+		out[0] = 0;
+
+		return out;
+	}
+
+	unsigned time = mpd_song_get_duration(config->curr_song);
+
+	return timeToString(config, time);
+}
+
+char* getTimeBar(Config* config, int status) {
+
+	char* timeBar = malloc(config->timebar + 1);
+	unsigned duration = mpd_song_get_duration(config->curr_song);
+	unsigned elapsed = mpd_status_get_elapsed_time(config->mpd_status);
+
+	unsigned blockSize = duration / (config->timebar - 2);
+	timeBar[0] = '[';
+	unsigned i;
+	for (i = 1; i < elapsed / blockSize; i++) {
+		timeBar[i] = '=';
+	}
+	if (i == config->timebar - 1) {
+		i--;
+	}
+		timeBar[i] = '>';
+	i++;
+	for (; i < config->timebar; i++) {
+		timeBar[i] = '-';
+	}
+
+	timeBar[config->timebar - 1] = ']';
+	timeBar[config->timebar] = 0;
+
+	return timeBar;
+}
+
 
 int getVolume(Config* config, int status) {
 	if(!config->mpd_status) {

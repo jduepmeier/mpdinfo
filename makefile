@@ -12,7 +12,7 @@ install:
 	install -m 0755 mpdinfo $(INSTALLPATH)
 
 run:
-	valgrind --leak-check=full ./mpdinfo -c sample.conf -v 8
+	valgrind --leak-check=full ./mpdinfo -c sample.conf
 
 clean:
 	rm mpdinfo

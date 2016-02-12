@@ -74,14 +74,21 @@ const MPD_TOKEN MPD_FORMAT_TAGS[] = {
         {
                 .name = "%track%",
                 .action = &getTrack
-        }
+        },
+	{
+		.name = "%timebar%",
+		.action = &getTimeBar
+	},
+	{
+		.name = "%duration%",
+		.action = &getDuration
+	}
 };
 
 const MPD_TOKEN* getUserToken(Config* config, char* str) {
 
 	DecisionToken* token = config->decTokens;
 	while(token) {
-
 		if (!strncmp(str, token->name, strlen(token->name))) {
 			return token->type;
 		}
@@ -101,7 +108,8 @@ const MPD_TOKEN* getMPDToken(Config* config, char* str) {
 
 
 	unsigned i;
-	for (i = 0; i < sizeof(MPD_TOKEN); i++) {
+	for (i = 0; i < sizeof(MPD_FORMAT_TAGS) / sizeof(MPD_TOKEN); i++) {
+		logprintf(config->log, LOG_DEBUG, "curr token: %s\n", MPD_FORMAT_TAGS[i].name);
 		if (!strncmp(str, MPD_FORMAT_TAGS[i].name, strlen(MPD_FORMAT_TAGS[i].name))) {
 			return &MPD_FORMAT_TAGS[i];
 		}

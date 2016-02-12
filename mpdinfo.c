@@ -30,7 +30,11 @@ struct mpd_connection* conn = NULL;
 // sets mpd host from arguments
 int setHost(int argc, char** argv, void* c) {
 	Config* config = (Config*) c;
-	config->connectionInfo->host = argv[1];
+	
+	free(config->connectionInfo->host);
+	config->connectionInfo->host = malloc(strlen(argv[1]) + 1);
+	
+	strncpy(config->connectionInfo->host,argv[1], strlen(argv[1]) + 1);
 
 	return 0;
 }
@@ -110,7 +114,9 @@ struct mpd_connection* mpdinfo_connect(Config* config) {
 	logprintf(config->log, LOG_INFO, "Trying to connect to: %s:%d\n", config->connectionInfo->host, config->connectionInfo->port);
 	struct mpd_connection* conn = mpd_connection_new(config->connectionInfo->host, config->connectionInfo->port, 0);
 
-	if (mpd_connection_get_error(conn) != MPD_ERROR_SUCCESS) {
+	enum mpd_error error = mpd_connection_get_error(conn);
+
+	if (error != MPD_ERROR_SUCCESS && error != MPD_ERROR_TIMEOUT) {
 		logprintf(config->log, LOG_ERROR, "%s\n", mpd_connection_get_error_message(conn));
 		mpd_connection_free(conn);
 		return NULL;
@@ -169,16 +175,7 @@ struct mpd_connection* refresh(Config* config, struct mpd_connection* conn) {
 	config->mpd_status = mpd_run_status(conn);
 
 	// check for errors
-	if (mpd_connection_get_error(conn) != MPD_ERROR_SUCCESS) {
-		logprintf(config->log, LOG_ERROR, "%s\n", mpd_connection_get_error_message(conn));
-		printf("Connection lost, reconnecting.\n\f");
-		mpd_connection_free(conn);
-		conn = mpdinfo_reconnect(config);
-		if (!conn) {
-			return NULL;
-		}
-		return refresh(config, conn);
-	} else {
+	if (config->mpd_status && config->curr_song) {
 		// generate output
 		char* out = generateOutputString(config);
 		// and free the cache again
@@ -190,11 +187,19 @@ struct mpd_connection* refresh(Config* config, struct mpd_connection* conn) {
 		if  (config->curr_song) {
 			mpd_song_free(config->curr_song);
 		}
-
 		// we can print it
 		printf("\f%s", out);
 		fflush(stdout);
 		free(out);
+	} else {
+		logprintf(config->log, LOG_ERROR, "%s\n", mpd_connection_get_error_message(conn));
+		printf("Connection lost, reconnecting.\n\f");
+		mpd_connection_free(conn);
+		conn = mpdinfo_reconnect(config);
+		if (!conn) {
+			return NULL;
+		}
+		return refresh(config, conn);
 	}
 	
 	return conn;
@@ -208,15 +213,45 @@ void force_refresh() {
 	}
 }
 
+int run_select(Config* config, struct mpd_connection* conn) {
+	struct timeval tv;
+	fd_set readfds;
+
+	int conn_fd = mpd_connection_get_fd(conn);
+
+	tv.tv_sec = config->update;
+	tv.tv_usec = 0;
+
+	FD_ZERO(&readfds);
+	FD_SET(conn_fd, &readfds);
+
+	return select(conn_fd + 1, &readfds, NULL, NULL, &tv);
+}
+
 // main wait function
 void* wait_for_action(Config* config, struct mpd_connection* conn) {
 
 	logprintf(config->log, LOG_INFO, "letsgo :)\n");
+	
 	do {
 		// refresh output and wait for any change on mpd
 		conn = refresh(config, conn);
 		if (conn) {
-			mpd_run_idle(conn);
+			if (config->update > 0) {
+				mpd_send_idle(conn);
+
+				int error = run_select(config, conn);
+				if (error < 0) {
+					logprintf(config->log, LOG_ERROR, "%s\n" , strerror(errno));
+					break;
+				} else if (error == 0) {
+					mpd_send_noidle(conn);
+				}
+				mpd_recv_idle(conn, true);
+			} else {
+				mpd_run_idle(conn);
+			}
+
 			logprintf(config->log, LOG_DEBUG, "refresh");
 		}
 	} while (!QUIT);
@@ -424,6 +459,31 @@ int setTokenParam(const char* cat, const char* key, const char* value, EConfig* 
 	return 0;
 }
 
+
+int setConfigUpdateInterval(const char* cat, const char* key, const char* value, EConfig* econfig, void* c) {
+
+	Config* config = (Config*) c;
+
+	config->update = strtoul(value, NULL, 10);
+
+	return 0;
+}
+
+int setConfigTimeBar(const char* cat, const char* key, const char* value, EConfig* econfig, void* c) {
+
+	Config* config = (Config*) c;
+
+	config->timebar = strtoul(value, NULL, 10);
+
+	if (!config->timebar) {
+		logprintf(config->log, LOG_ERROR, "Timebar value must an integer higher than zero (%s).\n", value);
+		return -1;
+	}
+
+
+	return 0;
+}
+
 // parses the config file from arguments
 int setConfigPath(int argc, char** argv, void* c) {
 	Config* prg_config = (Config*) c;
@@ -444,6 +504,9 @@ int setConfigPath(int argc, char** argv, void* c) {
 	econfig_addParam(config, cats[0], "port", setConfigPort);
 	econfig_addParam(config, cats[0], "verbosity", setConfigVerbosity);
 	econfig_addParam(config, cats[0], "logfile", setConfigLogfile);
+	econfig_addParam(config, cats[0], "timebar", setConfigTimeBar);
+	econfig_addParam(config, cats[0], "update", setConfigUpdateInterval);
+	
 
 	econfig_addParam(config, cats[1], "play", setOutputParam);
 	econfig_addParam(config, cats[1], "pause", setOutputParam);
@@ -572,6 +635,8 @@ int main(int argc, char** argv) {
 		.log = log,
 		.configPath = "",
 		.format = "",
+		.timebar = 10,
+		.update = 0,
 		.play = NULL,
 		.pause = NULL,
 		.stop = NULL,

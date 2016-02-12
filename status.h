@@ -23,3 +23,5 @@ char* 	getTrack		(Config* config, int status);
 char* 	getDisc			(Config* config, int status);
 char* 	getComment		(Config* config, int status);
 char* 	getDate			(Config* config, int status);
+char* 	getTimeBar		(Config* config, int status);
+char* 	getDuration		(Config* config, int status);

@@ -23,6 +23,8 @@ struct Config {
         char* configPath;
         char* format;
 	LOGGER log;
+	unsigned timebar;
+	unsigned update;
 	FormatToken* play;
         FormatToken* pause;
         FormatToken* stop;
