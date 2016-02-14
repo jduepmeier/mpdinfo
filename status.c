@@ -118,13 +118,13 @@ char* getId3Tag(Config* config, int status, enum mpd_tag_type tag_type) {
 	}
 
 	const char* tag = mpd_song_get_tag(config->curr_song, tag_type, 0);
-	
+
 	if (tag == NULL || !strcmp(tag, "")) {
 		return out;
 	}
-	
+
 	free(out);
-	
+
 	out = malloc(strlen(tag) +1);
         strncpy(out, tag, strlen(tag) + 1);
 	return out;
@@ -195,7 +195,7 @@ char* getFilename(Config* config, int status) {
 	free(out);
 	out = malloc(strlen(str) + 1);
 	strncpy(out, str, strlen(str) + 1);
-	
+
 	return out;
 }
 
@@ -242,14 +242,26 @@ char* getDuration(Config* config, int status) {
 
 char* getTimeBar(Config* config, int status) {
 
+	if (config->timebar < 3) {
+		char* out = malloc(1);
+		out[0] = 0;
+		return out;
+	}
+
 	char* timeBar = malloc(config->timebar + 1);
 	unsigned duration = mpd_song_get_duration(config->curr_song);
 	unsigned elapsed = mpd_status_get_elapsed_time(config->mpd_status);
-
 	unsigned blockSize = duration / (config->timebar - 2);
+
+	unsigned block = 0;
+
+	if (blockSize) {
+		block = elapsed / blockSize;
+	}
+
 	timeBar[0] = '[';
 	unsigned i;
-	for (i = 1; i < elapsed / blockSize; i++) {
+	for (i = 1; i < block; i++) {
 		timeBar[i] = '=';
 	}
 	if (i == config->timebar - 1) {
