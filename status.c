@@ -285,15 +285,15 @@ int getVolume(Config* config, int status) {
 		return -1;
 	}
 	int volume = mpd_status_get_volume(config->mpd_status);
-        return volume;
+	return volume;
 }
 
 char* getVolumeString(Config* config, int status) {
-        int vol = getVolume(config, status);
+	int vol = getVolume(config, status);
 
 	unsigned length = snprintf(NULL, 0, "%d", vol) + 1;
-        char* volString = malloc(length);
-        snprintf(volString, length, "%d", vol);
-        return volString;
+	char* volString = malloc(length);
+	snprintf(volString, length, "%d", vol);
+	return volString;
 }
 

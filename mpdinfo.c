@@ -156,13 +156,13 @@ struct mpd_connection* refresh(Config* config, struct mpd_connection* conn) {
 	if (!config) {
 		return NULL;
 	}
-	
-	logprintf(config->log, LOG_DEBUG, "Starting refresh.\n");	
+
+	logprintf(config->log, LOG_DEBUG, "Starting refresh.\n");
 
 	if (!conn) {
 		logprintf(config->log, LOG_WARNING, "No connection");
-		
-		
+
+
 		conn = mpdinfo_reconnect(config);
 
 		if (!conn) {
@@ -175,18 +175,16 @@ struct mpd_connection* refresh(Config* config, struct mpd_connection* conn) {
 	config->mpd_status = mpd_run_status(conn);
 
 	// check for errors
-	if (config->mpd_status && config->curr_song) {
+	if (config->mpd_status) {
 		// generate output
 		char* out = generateOutputString(config);
 		// and free the cache again
-		
-		if (config->mpd_status) {
-			mpd_status_free(config->mpd_status);
-		}
-		
-		if  (config->curr_song) {
+
+		mpd_status_free(config->mpd_status);
+		if (config->curr_song) {
 			mpd_song_free(config->curr_song);
 		}
+
 		// we can print it
 		printf("\f%s", out);
 		fflush(stdout);
@@ -201,9 +199,8 @@ struct mpd_connection* refresh(Config* config, struct mpd_connection* conn) {
 		}
 		return refresh(config, conn);
 	}
-	
+
 	return conn;
-	
 }
 
 // force refresh signal function
@@ -232,7 +229,7 @@ int run_select(Config* config, struct mpd_connection* conn) {
 void* wait_for_action(Config* config, struct mpd_connection* conn) {
 
 	logprintf(config->log, LOG_INFO, "letsgo :)\n");
-	
+
 	do {
 		// refresh output and wait for any change on mpd
 		conn = refresh(config, conn);
@@ -281,16 +278,16 @@ int setConfigHost(const char* category, char* key, char* value, EConfig* econfig
 	logprintf(config->log, LOG_DEBUG, "Set config host");
 
 	if (!config->connectionInfo) {
-		return -1;	
+		return -1;
 	}
-			
+
 	if (config->connectionInfo->host) {
 		free(config->connectionInfo->host);
 	}
 
 	config->connectionInfo->host = malloc(strlen(value) +1);
 	strcpy(config->connectionInfo->host, value);
-	
+
 	return 0;
 }
 
