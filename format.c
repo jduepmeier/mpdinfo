@@ -98,7 +98,7 @@ const MPD_TOKEN* getUserToken(Config* config, char* str) {
 
 	return NULL;
 }
-	
+
 const MPD_TOKEN* getMPDToken(Config* config, char* str) {
 	logprintf(config->log, LOG_INFO, "Current Token Str: %s\n", str);
 
@@ -131,7 +131,7 @@ char* getIfNotToken(Config* config, int status, DecisionToken* token) {
 		if (!isspace(a[i])) {
 			out = malloc(1);
 			out[0] = 0;
-			free(a);	
+			free(a);
 			return out;
 		}
 	}
@@ -167,7 +167,7 @@ char* getIfToken(Config* config, int status, DecisionToken* token) {
 
 // parse special characters
 void formatControls(const char* format, char* output) {
-	
+
 	int i = 0;
 	int j = 0;
 	int length = strlen(format);
@@ -190,7 +190,6 @@ void formatControls(const char* format, char* output) {
 						break;
 					default:
 						output[j] = '\\';
-						j++;
 						i--;
 						break;
 				}
@@ -246,11 +245,11 @@ char* generateOutputStringFromToken(Config* config, FormatToken* token, int stat
 	char* args;
 
 	while(token) {
-		
+
 		// text token have the string in the data section. The others have a function in data section.
-		
+
 		if (token->type == &MPD_FORMAT_TAGS[TOKEN_IF]) {
-			
+
 			logprintf(config->log, LOG_DEBUG, "Found if token\n");
 			args = getIfToken(config, status, token->data);
 		} else if (token->type == &MPD_FORMAT_TAGS[TOKEN_IF_NOT]) {
@@ -351,7 +350,7 @@ FormatToken* nextBuildToken(Config* config, char* token, int size) {
 	strncpy(name, token, size + 1);
 	name[size] = 0;
 
-	if (!type) {	
+	if (!type) {
 		logprintf(config->log, LOG_INFO, "Text token found.\n");
 		type = &MPD_FORMAT_TAGS[TOKEN_TEXT];
 	} else {
@@ -414,7 +413,7 @@ FormatToken* buildTokenStructure(Config* config, const char* input) {
 		if (curr[0] == 0) {
 			break;
 		}
-		
+
 		curr++;
 	};
 
