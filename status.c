@@ -249,7 +249,12 @@ char* getTimeBar(Config* config, int status) {
 	}
 
 	char* timeBar = malloc(config->timebar + 1);
-	unsigned duration = mpd_song_get_duration(config->curr_song);
+	unsigned duration;
+	if (config->curr_song) {
+		duration = mpd_song_get_duration(config->curr_song);
+	} else {
+		duration = 0;
+	}
 	unsigned elapsed = mpd_status_get_elapsed_time(config->mpd_status);
 	unsigned blockSize = duration / (config->timebar - 2);
 
