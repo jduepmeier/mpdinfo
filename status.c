@@ -228,11 +228,8 @@ char* getElapsedTime(Config* config, int status) {
 }
 
 char* getDuration(Config* config, int status) {
-	if (!config->mpd_status) {
-		char* out = malloc(1);
-		out[0] = 0;
-
-		return out;
+	if (!config->curr_song) {
+		return timeToString(config, 0);
 	}
 
 	unsigned time = mpd_song_get_duration(config->curr_song);
@@ -269,10 +266,11 @@ char* getTimeBar(Config* config, int status) {
 	for (i = 1; i < block; i++) {
 		timeBar[i] = '=';
 	}
-	if (i == config->timebar - 1) {
-		i--;
+	if (i > config->timebar - 2) {
+		i = config->timebar - 2;
 	}
-		timeBar[i] = '>';
+
+	timeBar[i] = '>';
 	i++;
 	for (; i < config->timebar; i++) {
 		timeBar[i] = '-';
