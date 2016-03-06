@@ -186,7 +186,7 @@ struct mpd_connection* refresh(Config* config, struct mpd_connection* conn) {
 		}
 
 		// we can print it
-		printf("\f%s", out);
+		printf("%s", out);
 		fflush(stdout);
 		free(out);
 	} else {
