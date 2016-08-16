@@ -224,7 +224,7 @@ char* getElapsedTime(Config* config, int status) {
 
 	unsigned time = mpd_status_get_elapsed_time(config->mpd_status);
 
-	return timeToString(config, time); 
+	return timeToString(config, time);
 }
 
 char* getDuration(Config* config, int status) {
@@ -235,6 +235,21 @@ char* getDuration(Config* config, int status) {
 	unsigned time = mpd_song_get_duration(config->curr_song);
 
 	return timeToString(config, time);
+}
+
+char* getQueueLength(Config* config, int status) {
+	logprintf(config->log, LOG_DEBUG, "queueLength\n");
+
+	if (!config->mpd_status) {
+		return strdup("0");
+	}
+
+	unsigned len = mpd_status_get_queue_length(config->mpd_status);
+
+	int sc = snprintf(NULL, 0, "%d", len) + 1;
+	char* s = calloc(sc, sizeof(char));
+	snprintf(s, sc, "%d", len);
+	return s;
 }
 
 char* getTimeBar(Config* config, int status) {

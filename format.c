@@ -82,6 +82,10 @@ const MPD_TOKEN MPD_FORMAT_TAGS[] = {
 	{
 		.name = "%duration%",
 		.action = &getDuration
+	},
+	{
+		.name = "%queue_length%",
+		.action = &getQueueLength
 	}
 };
 
