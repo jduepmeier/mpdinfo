@@ -23,17 +23,15 @@
 #include "mpdinfo.h"
 
 int REFRESH = 1;
-int QUIT = 0;
 // only for signals
-struct mpd_connection* conn = NULL;
+volatile sig_atomic_t QUIT;
 
 // sets mpd host from arguments
 int setHost(int argc, char** argv, void* c) {
 	Config* config = (Config*) c;
-	
+
 	free(config->connectionInfo->host);
-	config->connectionInfo->host = malloc(strlen(argv[1]) + 1);
-	
+	config->connectionInfo->host = calloc(strlen(argv[1]) + 1, sizeof(char));
 	strncpy(config->connectionInfo->host,argv[1], strlen(argv[1]) + 1);
 
 	return 0;
@@ -49,7 +47,7 @@ int setPort(int argc, char** argv, void*c ) {
 
 // set verbosity from arguments
 int setVerbosity(int argc, char** argv, void* c) {
-	
+
 	Config* config = (Config*) c;
 	config->log.verbosity = strtoul(argv[1], NULL, 10);
 
@@ -72,7 +70,7 @@ int setFormat(int argc, char** argv, void* c) {
 	if (!config->none) {
 		config->none = parseTokenString(config, argv[1]);
 	}
-	
+
 	config->format = argv[1];
 
 	return 0;
@@ -102,15 +100,8 @@ int setStopFormat(int argc, char** argv, void* c) {
 	return 0;
 }
 
-
-// only for signals
-void setConnection(struct mpd_connection* c) {
-	conn = c;
-}
-
 struct mpd_connection* mpdinfo_connect(Config* config) {
-	setConnection(NULL);
-	
+
 	logprintf(config->log, LOG_INFO, "Trying to connect to: %s:%d\n", config->connectionInfo->host, config->connectionInfo->port);
 	struct mpd_connection* conn = mpd_connection_new(config->connectionInfo->host, config->connectionInfo->port, 0);
 
@@ -122,9 +113,6 @@ struct mpd_connection* mpdinfo_connect(Config* config) {
 		return NULL;
 	}
 	logprintf(config->log, LOG_INFO, "Connected to %s\n", config->connectionInfo->host);
-	
-	// needed for signals
-	setConnection(conn);
 	return conn;
 }
 
@@ -203,13 +191,6 @@ struct mpd_connection* refresh(Config* config, struct mpd_connection* conn) {
 	return conn;
 }
 
-// force refresh signal function
-void force_refresh() {
-	if (conn) {
-		mpd_send_noidle(conn);
-	}
-}
-
 int run_select(Config* config, struct mpd_connection* conn) {
 	struct timeval tv;
 	fd_set readfds;
@@ -239,8 +220,13 @@ void* wait_for_action(Config* config, struct mpd_connection* conn) {
 
 				int error = run_select(config, conn);
 				if (error < 0) {
-					logprintf(config->log, LOG_ERROR, "%s\n" , strerror(errno));
-					break;
+					if (errno == EINTR) {
+						logprintf(config->log, LOG_INFO, "%s\n", strerror(errno));
+						continue;
+					} else {
+						logprintf(config->log, LOG_ERROR, "%s\n" , strerror(errno));
+						break;
+					}
 				} else if (error == 0) {
 					mpd_send_noidle(conn);
 				}
@@ -266,9 +252,7 @@ void* wait_for_action(Config* config, struct mpd_connection* conn) {
 
 // quit signal function
 void quit() {
-
 	QUIT = 1;
-	force_refresh();
 }
 
 // set mpd host from config file
@@ -331,7 +315,7 @@ int setOutputParam(const char* cat, const char* key, const char* value, EConfig*
 		config->play = token;
 	} else if (!strcmp(key, "stop")) {
 		config->stop = token;
-	} else {	
+	} else {
 		// save in none
 		config->none = token;
 	}
@@ -417,7 +401,7 @@ int setConfigLogfile(const char* cat, const char* key, const char* value, EConfi
 
 // Sets a token parameter from config file
 int setTokenParam(const char* cat, const char* key, const char* value, EConfig* econfig, void* c) {
-	
+
 	Config* config = (Config*) c;
 
 	TokenConfigItem* item = getTokenConfigItem(cat, config);
@@ -485,7 +469,7 @@ int setConfigTimeBar(const char* cat, const char* key, const char* value, EConfi
 int setConfigPath(int argc, char** argv, void* c) {
 	Config* prg_config = (Config*) c;
 	EConfig* config = econfig_init(argv[1], c);
-	
+
 	unsigned cats[6];
 
 	// Setup valid categories
@@ -503,7 +487,7 @@ int setConfigPath(int argc, char** argv, void* c) {
 	econfig_addParam(config, cats[0], "logfile", setConfigLogfile);
 	econfig_addParam(config, cats[0], "timebar", setConfigTimeBar);
 	econfig_addParam(config, cats[0], "update", setConfigUpdateInterval);
-	
+
 
 	econfig_addParam(config, cats[1], "play", setOutputParam);
 	econfig_addParam(config, cats[1], "pause", setOutputParam);
@@ -577,7 +561,7 @@ void cleanDecisionTokens(Config* config, DecisionToken* token) {
 	freeTokenStruct(config->log, token->a);
 	freeTokenStruct(config->log, token->b);
 	free(token->name);
-	
+
 	free(token);
 }
 
@@ -601,8 +585,7 @@ int main(int argc, char** argv) {
 	char* env_host = getenv("MPD_HOST");
 
 	if (!env_host) {
-		info.host = malloc(strlen("localhost") + 1);
-		strcpy(info.host, "localhost");
+		info.host = strdup("localhost");
 	} else {
 		info.host = malloc(strlen(env_host) + 1);
 		strncpy(info.host, env_host, strlen(env_host) + 1);
@@ -614,8 +597,7 @@ int main(int argc, char** argv) {
 		info.port = strtoul(env_port, NULL, 10);
 		logprintf(log, LOG_INFO, "Using env variable port: %d\n", info.port);
 	}
-	
-	
+
 	logprintf(log, LOG_DEBUG, "Finished connection info. Host=%s, Port=%d\n", info.host, info.port);
 
 	TokenConfigItem repeat = nullTokenConfigItem();
@@ -661,12 +643,25 @@ int main(int argc, char** argv) {
 		return -1;
 	}
 
-	signal(SIGINT, quit);
-	signal(SIGTERM, quit);
+	struct sigaction act = {
+		.sa_handler = &quit
+	};
+
+	if (sigaction(SIGTERM, &act, NULL) < 0 || sigaction(SIGINT, &act, NULL) < 0) {
+		logprintf(log, LOG_ERROR, "Failed to set signal mask\n");
+		return -1;
+	}
+
+	act.sa_handler = SIG_IGN;
+
+	if (sigaction(SIGHUP, &act, NULL) < 0 || sigaction(SIGUSR1, &act, NULL) < 0) {
+		logprintf(log, LOG_ERROR, "Failed to set signal mask\n");
+		return -1;
+	}
 
 	logconfig(config.log, LOG_DEBUG, &config);
 	wait_for_action(&config, conn);
-	
+
 	cleanDecisionTokens(&config, config.decTokens);
 
 	if (config.log.stream != stderr) {

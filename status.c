@@ -68,11 +68,9 @@ char* getTokenStatusString(int status, int playStatus, TokenConfigItem* item) {
 	// check for NULL pointer
 	char* str_status;
 	if (!output) {
-		str_status = malloc(1);
-		str_status[0] = 0;
+		str_status = strdup("");
 	} else {
-		str_status = malloc(strlen(output) + 1);
-		strcpy(str_status, output);
+		str_status = strdup(output);
 	}
 	return str_status;
 }
@@ -90,45 +88,30 @@ char* getDBUpdateString(Config* config, int status) {
 
 char* getStatusString(Config* config, int status) {
 
-        char* output = malloc(8);
-
         switch (status) {
-
                 case MPD_STATE_PLAY:
-                        strcpy(output,"playing");
-                        return output;
+                        return strdup("playing");
                 case MPD_STATE_PAUSE:
-                        strcpy(output,"pause");
-                        return output;
+                        return strdup("pause");
                 case MPD_STATE_STOP:
-                        strcpy(output,"stopped");
-                        return output;
+                        return strdup("stopped");
                 default:
-                        strcpy(output,"unkown");
-                        return output;
+                        return strdup("unkown");
         }
 }
 
 char* getId3Tag(Config* config, int status, enum mpd_tag_type tag_type) {
-	char* out = malloc(1);
-	out[0] = 0;
-
 	if (!config->curr_song) {
-		return out;
+		return strdup("");
 	}
 
 	const char* tag = mpd_song_get_tag(config->curr_song, tag_type, 0);
 
 	if (tag == NULL || !strcmp(tag, "")) {
-		return out;
+		return strdup("");
+	} else {
+		return strdup(tag);
 	}
-
-	free(out);
-
-	out = malloc(strlen(tag) +1);
-        strncpy(out, tag, strlen(tag) + 1);
-	return out;
-
 }
 char* getTitle(Config* config, int status) {
         return getId3Tag(config, status, MPD_TAG_TITLE);
@@ -166,21 +149,15 @@ char* getDate(Config* config, int status) {
 }
 
 char* getFilename(Config* config, int status) {
-	char* out = malloc(1);
-	out[0] = 0;
 
 	if (!config->curr_song) {
-		return out;
+		return strdup("");
 	}
 
 	const char* uri = mpd_song_get_uri(config->curr_song);
 
-	if (uri == NULL) {
-		return out;
-	}
-
-	if (strcmp(uri, "") == 0) {
-		return out;
+	if (!uri || uri[0] == 0) {
+		return strdup("");
 	}
 
 	const char* str = strrchr(uri, '/');
@@ -192,11 +169,7 @@ char* getFilename(Config* config, int status) {
 
 	str++;
 
-	free(out);
-	out = malloc(strlen(str) + 1);
-	strncpy(out, str, strlen(str) + 1);
-
-	return out;
+	return strdup(str);
 }
 
 char* timeToString(Config* config, unsigned time) {
@@ -208,7 +181,7 @@ char* timeToString(Config* config, unsigned time) {
 	min = time / 60;
 
 	int length = snprintf(NULL, 0, "%d:%02d", min, sec) + 1;
-	char* out = malloc(length);
+	char* out = calloc(length, sizeof(char));
 	snprintf(out, length, "%d:%02d", min, sec);
 
 	return out;
@@ -217,9 +190,7 @@ char* timeToString(Config* config, unsigned time) {
 char* getElapsedTime(Config* config, int status) {
 
 	if (!config->mpd_status) {
-		char* out = malloc(1);
-		out[0] = 0;
-		return out;
+		return strdup("");
 	}
 
 	unsigned time = mpd_status_get_elapsed_time(config->mpd_status);
@@ -246,7 +217,7 @@ char* getQueueLength(Config* config, int status) {
 
 	unsigned len = mpd_status_get_queue_length(config->mpd_status);
 
-	int sc = snprintf(NULL, 0, "%d", len) + 1;
+	unsigned sc = snprintf(NULL, 0, "%d", len) + 1;
 	char* s = calloc(sc, sizeof(char));
 	snprintf(s, sc, "%d", len);
 	return s;
@@ -255,12 +226,10 @@ char* getQueueLength(Config* config, int status) {
 char* getTimeBar(Config* config, int status) {
 
 	if (config->timebar < 3) {
-		char* out = malloc(1);
-		out[0] = 0;
-		return out;
+		return strdup("");
 	}
 
-	char* timeBar = malloc(config->timebar + 1);
+	char* timeBar = calloc(config->timebar + 1, sizeof(char));
 	unsigned duration;
 	if (config->curr_song) {
 		duration = mpd_song_get_duration(config->curr_song);
@@ -310,7 +279,7 @@ char* getVolumeString(Config* config, int status) {
 	int vol = getVolume(config, status);
 
 	unsigned length = snprintf(NULL, 0, "%d", vol) + 1;
-	char* volString = malloc(length);
+	char* volString = calloc(length, sizeof(char));
 	snprintf(volString, length, "%d", vol);
 	return volString;
 }
