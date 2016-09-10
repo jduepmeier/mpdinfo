@@ -17,6 +17,7 @@
 #include "libs/logger.h"
 #include "libs/easy_config.h"
 
+#include "strdup.h"
 #include "help.h"
 #include "format.h"
 #include "status.h"
@@ -528,9 +529,9 @@ int addArguments() {
 	// Setup command line arguments
 	eargs_addArgument("-c", "--config", setConfigPath, 1);
 	eargs_addArgument("-f", "--format", setFormat, 1);	
-	eargs_addArgument("-fpa", "--format=pause", setPauseFormat, 1);
-	eargs_addArgument("-fpl", "--format=play", setPlayFormat, 1);
-	eargs_addArgument("-fs", "--format=stop", setStopFormat, 1);
+	eargs_addArgument("-fpa", "--format-pause", setPauseFormat, 1);
+	eargs_addArgument("-fpl", "--format-play", setPlayFormat, 1);
+	eargs_addArgument("-fs", "--format-stop", setStopFormat, 1);
 	eargs_addArgument("-h", "--host", setHost, 1);
 	eargs_addArgument("-hp", "--help", usage, 0);
 	eargs_addArgument("-p", "--port", setPort, 1);

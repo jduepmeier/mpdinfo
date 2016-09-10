@@ -5,11 +5,14 @@ typeset -A opt_args
 
 _arguments -C \
 	{-c,--config}'[Spezifies a config file]:file:_files' \
-	{-h,--help}'[Displays help]' \
-	{-d,--debug}'[Displays debugging information]' \
-	{-fs,--format=stop}'[formats the output string for status stopped]' \
-	{-fpa,--format=pause}'[formats the output string for status paused]' \
-	{-fpl,--format=play}'[Formats the output for status playing]' \
+	{-f,--format}'[formats the output string for all]:format (string)' \
+	{-fs,--format-stop}'[formats the output string for status stopped]:format (string)' \
+	{-fpa,--format-pause}'[formats the output string for status paused]:format (string)' \
+	{-fpl,--format-play}'[Formats the output for status playing]:format (string)' \
+	{-hp,--help}'[Displays help]' \
+	{-h,--host}'[Set the hostname]:host (string)' \
+	{-p,--port}'[Set the port]:port (int)' \
+	{-v,--verbosity}'[Set verbosity level between 0 (Error) and 5 (Debug)]:verbosity (int)' \
 	 && return 0
 
 return 1
