@@ -28,8 +28,9 @@ typedef struct DecisionToken DecisionToken;
 struct DecisionToken {
 	char* name;
 	const MPD_TOKEN* type;
-	FormatToken* a;
-	FormatToken* b;
+	FormatToken* condition;
+	FormatToken* yes;
+	FormatToken* no;
 	DecisionToken* next;
 };
 
@@ -54,7 +55,6 @@ typedef struct Config Config;
 
 #define TOKEN_TEXT 0
 #define TOKEN_IF 1
-#define TOKEN_IF_NOT 2
 
 #include "status.h"
 

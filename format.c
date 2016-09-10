@@ -19,10 +19,6 @@ const MPD_TOKEN MPD_FORMAT_TAGS[] = {
                 .name = "if",
                 .action = NULL
         },
-        [2] = {
-                .name = "ifnot",
-                .action = NULL
-        },
         {
                 .name = "%artist%",
                 .action = &getArtist
@@ -124,46 +120,28 @@ const MPD_TOKEN* getMPDToken(Config* config, char* str) {
 
 char* generateOutputStringFromToken(Config* config, FormatToken* token, int status);
 
-char* getIfNotToken(Config* config, int status, DecisionToken* token) {
-
-	char* a = generateOutputStringFromToken(config, token->a, status);
-	logprintf(config->log, LOG_DEBUG, "a string: (%s)\n", a);
-	int i;
-	char* out;
-
-	for (i = 0; i < strlen(a); i++) {
-		if (!isspace(a[i])) {
-			out = malloc(1);
-			out[0] = 0;
-			free(a);
-			return out;
-		}
-	}
-
-	free(a);
-
-	return generateOutputStringFromToken(config, token->b, status);
-}
-
 char* getIfToken(Config* config, int status, DecisionToken* token) {
 
-	char* a = generateOutputStringFromToken(config, token->a, status);
+	char* condition = generateOutputStringFromToken(config, token->condition, status);
 	int i;
 	char* out = NULL;
 
-	logprintf(config->log, LOG_DEBUG, "a string: (%s)\n", a);
-	for (i = 0; i < strlen(a); i++) {
-		if (!isspace(a[i])) {
-			out = generateOutputStringFromToken(config, token->b, status);
+	logprintf(config->log, LOG_DEBUG, "condition string: (%s)\n", condition);
+	for (i = 0; i < strlen(condition); i++) {
+		if (!isspace(condition[i])) {
+			out = generateOutputStringFromToken(config, token->yes, status);
 			break;
 		}
 	}
 
-	free(a);
+	free(condition);
 
 	if (!out) {
-		out = malloc(1);
-		out[0] = 0;
+		if (token->no) {
+			out = generateOutputStringFromToken(config, token->no, status);
+		} else {
+			out = strdup("");
+		}
 	}
 
 	return out;
@@ -241,8 +219,7 @@ char* generateOutputString(Config* config) {
 char* generateOutputStringFromToken(Config* config, FormatToken* token, int status) {
 
 	logprintf(config->log, LOG_DEBUG, "begin output string generation\n");
-	char* output = malloc(1);
-	output[0] = 0;
+	char* output = strdup("");
 
 	unsigned len_out = 0;
 	unsigned len_args = 0;
@@ -253,14 +230,10 @@ char* generateOutputStringFromToken(Config* config, FormatToken* token, int stat
 		// text token have the string in the data section. The others have a function in data section.
 
 		if (token->type == &MPD_FORMAT_TAGS[TOKEN_IF]) {
-
 			logprintf(config->log, LOG_DEBUG, "Found if token\n");
 			args = getIfToken(config, status, token->data);
-		} else if (token->type == &MPD_FORMAT_TAGS[TOKEN_IF_NOT]) {
-			logprintf(config->log, LOG_DEBUG, "Found if not token\n");
-			args = getIfNotToken(config, status, token->data);
 		} else if (token->type != &MPD_FORMAT_TAGS[TOKEN_TEXT]) {
-			logprintf(config->log, LOG_DEBUG, "Found %s token\n", token->type->name);	
+			logprintf(config->log, LOG_DEBUG, "Found %s token\n", token->type->name);
 			char* (*p)(Config* config, int status) = token->type->action;
 			if (!p) {
 				logprintf(config->log, LOG_ERROR, "Function pointer is NULL (token->type = %d)\n", token->type);
@@ -269,10 +242,9 @@ char* generateOutputStringFromToken(Config* config, FormatToken* token, int stat
 			args = p(config, status);
 		} else {
 			logprintf(config->log, LOG_DEBUG, "Found text token\n");
-			args = malloc(strlen((char*) token->data) + 1);
-			strncpy(args, token->data, strlen((char*) token->data) + 1);
+			args = strndup(token->data, strlen((char*) token->data));
 		}
-		
+
 		if (args) {
 			logprintf(config->log, LOG_DEBUG, "%s\n", args);
 			len_args = strlen(args);
@@ -303,8 +275,8 @@ FormatToken* buildToken(Config* config, const MPD_TOKEN* type, char* tokenstr, v
 	token->type = type;
 
 	// check for user tokens
-	if (token->type == &MPD_FORMAT_TAGS[TOKEN_IF] || token->type == &MPD_FORMAT_TAGS[TOKEN_IF_NOT]) {
-		
+	if (token->type == &MPD_FORMAT_TAGS[TOKEN_IF]) {
+
 		// search the right token
 		DecisionToken* dtoken = config->decTokens;
 		while (dtoken) {
@@ -338,7 +310,7 @@ void freeTokenStruct(LOGGER log, FormatToken* token) {
 	}
 	freeTokenStruct(log, token->next);
 
-	if (token->type != &MPD_FORMAT_TAGS[TOKEN_IF] && token->type != &MPD_FORMAT_TAGS[TOKEN_IF_NOT]) {
+	if (token->type != &MPD_FORMAT_TAGS[TOKEN_IF]) {
 		logprintf(log, LOG_DEBUG,  "FREE %s\n", token->data);
 		free(token->data);
 	}
@@ -350,9 +322,7 @@ FormatToken* nextBuildToken(Config* config, char* token, int size) {
 
 	const MPD_TOKEN* type = getMPDToken(config, token);
 
-	char* name = malloc(size + 1);
-	strncpy(name, token, size + 1);
-	name[size] = 0;
+	char* name = strndup(token, size);
 
 	if (!type) {
 		logprintf(config->log, LOG_INFO, "Text token found.\n");

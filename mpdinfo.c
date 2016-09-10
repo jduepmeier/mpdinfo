@@ -338,8 +338,9 @@ int setDecisionParam(const char* cat, const char* key, const char* value, EConfi
 		config->decTokens->name = malloc(strlen(value) + 1);
 		strncpy(config->decTokens->name, value, strlen(value) + 1);
 
-		config->decTokens->a = NULL;
-		config->decTokens->b = NULL;
+		config->decTokens->condition = NULL;
+		config->decTokens->yes = NULL;
+		config->decTokens->no = NULL;
 
 		return 0;
 	}
@@ -353,18 +354,18 @@ int setDecisionParam(const char* cat, const char* key, const char* value, EConfi
 	if (!strcmp(key, "type")) {
 		if (!strcmp(value, "IF") || !strcmp(value, "if")) {
 			config->decTokens->type = &MPD_FORMAT_TAGS[TOKEN_IF];
-		} else if (!strcmp(value, "IFNOT") || !strcmp(value, "ifnot")) {
-			config->decTokens->type = &MPD_FORMAT_TAGS[TOKEN_IF_NOT];
 		}else {
 			logprintf(config->log, LOG_ERROR, "Unkown token type: %s.\n", value);
 			return -1;
 		}
 	// string for checking
-	} else if (!strcmp(key, "a")) {
-		config->decTokens->a = parseTokenString(config, value);
+	} else if (!strcmp(key, "condition")) {
+		config->decTokens->condition = parseTokenString(config, value);
+	} else if (!strcmp(key, "yes")) {
+		config->decTokens->yes = parseTokenString(config, value);
 	// output string
-	} else if (!strcmp(key, "b")) {
-		config->decTokens->b = parseTokenString(config, value);
+	} else if (!strcmp(key, "no")) {
+		config->decTokens->no = parseTokenString(config, value);
 	} else {
 		logprintf(config->log, LOG_ERROR, "Unkown key %s in decision token parsing.\n", key);
 		return -1;
@@ -509,8 +510,9 @@ int setConfigPath(int argc, char** argv, void* c) {
 	// Setup decision token parameter
 	econfig_addParam(config, cats[5], "name", setDecisionParam);
 	econfig_addParam(config, cats[5], "type", setDecisionParam);
-	econfig_addParam(config, cats[5], "a", setDecisionParam);
-	econfig_addParam(config, cats[5], "b", setDecisionParam);
+	econfig_addParam(config, cats[5], "condition", setDecisionParam);
+	econfig_addParam(config, cats[5], "yes", setDecisionParam);
+	econfig_addParam(config, cats[5], "no", setDecisionParam);
 
 	logprintf(prg_config->log, LOG_DEBUG, "Starting to parse config file.\n");
 	int out = econfig_parse(config);
@@ -559,8 +561,9 @@ void cleanDecisionTokens(Config* config, DecisionToken* token) {
 
 	cleanDecisionTokens(config, token->next);
 
-	freeTokenStruct(config->log, token->a);
-	freeTokenStruct(config->log, token->b);
+	freeTokenStruct(config->log, token->condition);
+	freeTokenStruct(config->log, token->yes);
+	freeTokenStruct(config->log, token->no);
 	free(token->name);
 
 	free(token);
