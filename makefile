@@ -15,4 +15,4 @@ run:
 	valgrind --leak-check=full ./mpdinfo -c sample.conf
 
 clean:
-	rm mpdinfo
+	rm -f mpdinfo
