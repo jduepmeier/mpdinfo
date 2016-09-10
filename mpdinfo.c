@@ -569,6 +569,35 @@ void cleanDecisionTokens(Config* config, DecisionToken* token) {
 	free(token);
 }
 
+void checkTokenStrings(Config* config) {
+
+
+	if (!config->play) {
+		logprintf(config->log, LOG_INFO, "Setting default play token string.\n");
+		config->play = parseTokenString(config, "%artist% - %title%");
+	}
+
+
+	if (!config->pause) {
+		logprintf(config->log, LOG_INFO, "Setting default pause token string.\n");
+		config->pause = parseTokenString(config, "%artist% - %title%\n-paused-");
+	}
+
+	if (!config->stop) {
+		logprintf(config->log, LOG_INFO, "Setting default stop token string.\n");
+		config->stop = parseTokenString(config, "-stopped");
+	}
+
+
+	if (!config->none) {
+		logprintf(config->log, LOG_INFO, "Setting default none token string.\n");
+		config->none = parseTokenString(config, "-none-");
+	}
+
+
+}
+
+
 int main(int argc, char** argv) {
 
 	ConnectionInfo info = {
@@ -591,8 +620,7 @@ int main(int argc, char** argv) {
 	if (!env_host) {
 		info.host = strdup("localhost");
 	} else {
-		info.host = malloc(strlen(env_host) + 1);
-		strncpy(info.host, env_host, strlen(env_host) + 1);
+		info.host = strndup(env_host, strlen(env_host));
 		logprintf(log, LOG_INFO, "Using env variable host: %s\n", info.host);
 	}
 
@@ -639,6 +667,9 @@ int main(int argc, char** argv) {
 		free(config.connectionInfo->host);
 		return 1;
 	}
+
+	checkTokenStrings(&config);
+
 	struct mpd_connection* conn;
 	if (!(conn = mpdinfo_connect(&config))) {
 		logprintf(config.log, LOG_DEBUG, "Freeing structs.\n");
