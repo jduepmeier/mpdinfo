@@ -216,25 +216,21 @@ void* wait_for_action(Config* config, struct mpd_connection* conn) {
 		// refresh output and wait for any change on mpd
 		conn = refresh(config, conn);
 		if (conn) {
-			if (config->update > 0) {
-				mpd_send_idle(conn);
+			mpd_send_idle(conn);
 
-				int error = run_select(config, conn);
-				if (error < 0) {
-					if (errno == EINTR) {
-						logprintf(config->log, LOG_INFO, "%s\n", strerror(errno));
-						continue;
-					} else {
-						logprintf(config->log, LOG_ERROR, "%s\n" , strerror(errno));
-						break;
-					}
-				} else if (error == 0) {
-					mpd_send_noidle(conn);
+			int error = run_select(config, conn);
+			if (error < 0) {
+				if (errno == EINTR) {
+					logprintf(config->log, LOG_INFO, "%s\n", strerror(errno));
+					continue;
+				} else {
+					logprintf(config->log, LOG_ERROR, "%s\n" , strerror(errno));
+					break;
 				}
-				mpd_recv_idle(conn, true);
-			} else {
-				mpd_run_idle(conn);
+			} else if (error == 0) {
+				mpd_send_noidle(conn);
 			}
+			mpd_recv_idle(conn, true);
 
 			logprintf(config->log, LOG_DEBUG, "refresh");
 		}
@@ -585,7 +581,7 @@ void checkTokenStrings(Config* config) {
 
 	if (!config->stop) {
 		logprintf(config->log, LOG_INFO, "Setting default stop token string.\n");
-		config->stop = parseTokenString(config, "-stopped");
+		config->stop = parseTokenString(config, "-stopped-");
 	}
 
 
@@ -669,6 +665,9 @@ int main(int argc, char** argv) {
 	}
 
 	checkTokenStrings(&config);
+	if (!config.update) {
+		config.update = 60;
+	}
 
 	struct mpd_connection* conn;
 	if (!(conn = mpdinfo_connect(&config))) {
