@@ -1,12 +1,13 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include "mpdinfo.h"
 
 int usage(int argc, char** argv, void* c) {
-	char* fn = "mpdinfo";
-	printf("%s utility\n", fn);
+	Config* config = (Config*) c;
+	printf("%s utility\n", config->programName);
 
 	//options
-	printf("Usage: %s [options] <mode> [mode-args]\n", fn);
+	printf("Usage: %s [options] <mode> [mode-args]\n", config->programName);
 	printf("Available options:\n");
 	printf("\t-c   | --config <config>\tPath to Config file\n");
 	printf("\t-f   | --format <string>\tFormat string for all\n");
@@ -20,7 +21,7 @@ int usage(int argc, char** argv, void* c) {
 	
 	//examples
 	printf("\nExamples:\n");
-	printf("%s --format \"%%artist%% - %%title%%\"\t\t returns the title and artist in format *artist* - *title*\n", fn);
+	printf("%s --format \"%%artist%% - %%title%%\"\t\t returns the title and artist in format *artist* - *title*\n", config->programName);
 	
 	return -1;
 }

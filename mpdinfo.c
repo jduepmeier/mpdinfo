@@ -612,6 +612,7 @@ int main(int argc, char** argv) {
 	};
 
 	Config config = {
+		.programName = argv[0],
 		.log = log,
 		.configPath = "",
 		.format = "",

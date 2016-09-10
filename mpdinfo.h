@@ -20,15 +20,16 @@ typedef struct Config Config;
 #endif
 
 struct Config {
-        char* configPath;
-        char* format;
+	char* programName; // init with argv[0]
+	char* configPath;
+	char* format;
 	LOGGER log;
 	unsigned timebar;
 	unsigned update;
 	FormatToken* play;
-        FormatToken* pause;
-        FormatToken* stop;
-        FormatToken* none;
+	FormatToken* pause;
+	FormatToken* stop;
+	FormatToken* none;
 	TokenConfig* tokens;
 	DecisionToken* decTokens;
 	ConnectionInfo* connectionInfo;
