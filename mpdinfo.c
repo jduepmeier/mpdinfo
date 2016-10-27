@@ -150,8 +150,6 @@ struct mpd_connection* refresh(Config* config, struct mpd_connection* conn) {
 
 	if (!conn) {
 		logprintf(config->log, LOG_WARNING, "No connection");
-
-
 		conn = mpdinfo_reconnect(config);
 
 		if (!conn) {
@@ -175,12 +173,12 @@ struct mpd_connection* refresh(Config* config, struct mpd_connection* conn) {
 		}
 
 		// we can print it
-		printf("%s", out);
+		printf("%s%s%s", config->prefix, out, config->suffix);
 		fflush(stdout);
 		free(out);
 	} else {
 		logprintf(config->log, LOG_ERROR, "%s\n", mpd_connection_get_error_message(conn));
-		printf("Connection lost, reconnecting.\n\f");
+		//printf("Connection lost, reconnecting.\n\f");
 		mpd_connection_free(conn);
 		conn = mpdinfo_reconnect(config);
 		if (!conn) {
@@ -253,9 +251,7 @@ void quit() {
 }
 
 // set mpd host from config file
-int setConfigHost(const char* category, char* key, char* value, EConfig* econfig, void* c) {	
-	Config* config = (Config*) c;
-
+int setConfigHost(const char* category, char* key, char* value, EConfig* econfig, Config* config) {
 	logprintf(config->log, LOG_DEBUG, "Set config host");
 
 	if (!config->connectionInfo) {
@@ -273,8 +269,7 @@ int setConfigHost(const char* category, char* key, char* value, EConfig* econfig
 }
 
 // set mpd port from config file
-int setConfigPort(const char* cat, char* key, char* value, EConfig* econfig, void* c) {
-	Config* config = (Config*) c;
+int setConfigPort(const char* cat, char* key, char* value, EConfig* econfig, Config* config) {
 
 	if (config->connectionInfo) {
 		config->connectionInfo->port = strtoul(value, NULL, 10);
@@ -297,9 +292,7 @@ TokenConfigItem* getTokenConfigItem(const char* cat, Config* config) {
 	}
 }
 
-int setOutputParam(const char* cat, const char* key, const char* value, EConfig* econfig, void* c) {
-	Config* config = (Config*) c;
-
+int setOutputParam(const char* cat, const char* key, const char* value, EConfig* econfig, Config* config) {
 	FormatToken* token = parseTokenString(config, value);
 
 	if (!token) {
@@ -320,9 +313,7 @@ int setOutputParam(const char* cat, const char* key, const char* value, EConfig*
 	return 0;
 }
 
-int setDecisionParam(const char* cat, const char* key, const char* value, EConfig* econfig, void* c) {
-
-	Config* config = (Config*) c;
+int setDecisionParam(const char* cat, const char* key, const char* value, EConfig* econfig, Config* config) {
 
 	// every decision token needs a name
 	if (!strcmp(key, "name")) {
@@ -371,8 +362,7 @@ int setDecisionParam(const char* cat, const char* key, const char* value, EConfi
 }
 
 // Set verbosity from config file
-int setConfigVerbosity(const char* cat, const char* key, const char* value, EConfig* econfig, void* c) {
-	Config* config = (Config*) c;
+int setConfigVerbosity(const char* cat, const char* key, const char* value, EConfig* econfig, Config* config) {
 
 	config->log.verbosity = strtol(value, NULL, 10);
 
@@ -380,9 +370,7 @@ int setConfigVerbosity(const char* cat, const char* key, const char* value, ECon
 }
 
 // Set logfile from config file
-int setConfigLogfile(const char* cat, const char* key, const char* value, EConfig* econfig, void* c) {
-
-	Config* config = (Config*) c;
+int setConfigLogfile(const char* cat, const char* key, const char* value, EConfig* econfig, Config* config) {
 
 	config->log.stream = fopen(value, "a");
 
@@ -398,9 +386,7 @@ int setConfigLogfile(const char* cat, const char* key, const char* value, EConfi
 }
 
 // Sets a token parameter from config file
-int setTokenParam(const char* cat, const char* key, const char* value, EConfig* econfig, void* c) {
-
-	Config* config = (Config*) c;
+int setTokenParam(const char* cat, const char* key, const char* value, EConfig* econfig, Config* config) {
 
 	TokenConfigItem* item = getTokenConfigItem(cat, config);
 
@@ -438,35 +424,51 @@ int setTokenParam(const char* cat, const char* key, const char* value, EConfig* 
 	return 0;
 }
 
-
-int setConfigUpdateInterval(const char* cat, const char* key, const char* value, EConfig* econfig, void* c) {
-
-	Config* config = (Config*) c;
-
+int setConfigUpdateInterval(const char* cat, const char* key, const char* value, EConfig* econfig, Config* config) {
 	config->update = strtoul(value, NULL, 10);
 
 	return 0;
 }
 
-int setConfigTimeBar(const char* cat, const char* key, const char* value, EConfig* econfig, void* c) {
-
-	Config* config = (Config*) c;
-
+int setConfigTimeBar(const char* cat, const char* key, const char* value, EConfig* econfig, Config* config) {
 	config->timebar = strtoul(value, NULL, 10);
 
 	if (!config->timebar) {
-		logprintf(config->log, LOG_ERROR, "Timebar value must an integer higher than zero (%s).\n", value);
+		logprintf(config->log, LOG_ERROR, "Timebar value must be an integer higher than zero (%s).\n", value);
 		return -1;
 	}
-
 
 	return 0;
 }
 
+int setConfigPrefix(const char* cat, const char* key, const char* value, EConfig* econfig, Config* config) {
+
+	free(config->prefix);
+
+	char* output = calloc(strlen(value) + 1, sizeof(char));
+	formatControls(value, output);
+
+	config->prefix = output;
+
+	return 0;
+}
+
+int setConfigSuffix(const char* cat, const char* key, const char* value, EConfig* econfig, Config* config) {
+
+	free(config->suffix);
+
+	char* output = calloc(strlen(value) + 1, sizeof(char));
+	formatControls(value, output);
+
+	config->suffix = output;
+
+	return 0;
+}
+
+
 // parses the config file from arguments
-int setConfigPath(int argc, char** argv, void* c) {
-	Config* prg_config = (Config*) c;
-	EConfig* config = econfig_init(argv[1], c);
+int setConfigPath(int argc, char** argv, Config* prg_config) {
+	EConfig* config = econfig_init(argv[1], prg_config);
 
 	unsigned cats[6];
 
@@ -491,6 +493,8 @@ int setConfigPath(int argc, char** argv, void* c) {
 	econfig_addParam(config, cats[1], "pause", setOutputParam);
 	econfig_addParam(config, cats[1], "none", setOutputParam);
 	econfig_addParam(config, cats[1], "stop", setOutputParam);
+	econfig_addParam(config, cats[1], "prefix", setConfigPrefix);
+	econfig_addParam(config, cats[1], "suffix", setConfigSuffix);
 
 
 	// Tokens have the same parameters
@@ -526,7 +530,7 @@ int addArguments() {
 
 	// Setup command line arguments
 	eargs_addArgument("-c", "--config", setConfigPath, 1);
-	eargs_addArgument("-f", "--format", setFormat, 1);	
+	eargs_addArgument("-f", "--format", setFormat, 1);
 	eargs_addArgument("-fpa", "--format-pause", setPauseFormat, 1);
 	eargs_addArgument("-fpl", "--format-play", setPlayFormat, 1);
 	eargs_addArgument("-fs", "--format-stop", setStopFormat, 1);
@@ -567,12 +571,10 @@ void cleanDecisionTokens(Config* config, DecisionToken* token) {
 
 void checkTokenStrings(Config* config) {
 
-
 	if (!config->play) {
 		logprintf(config->log, LOG_INFO, "Setting default play token string.\n");
 		config->play = parseTokenString(config, "%artist% - %title%");
 	}
-
 
 	if (!config->pause) {
 		logprintf(config->log, LOG_INFO, "Setting default pause token string.\n");
@@ -584,13 +586,10 @@ void checkTokenStrings(Config* config) {
 		config->stop = parseTokenString(config, "-stopped-");
 	}
 
-
 	if (!config->none) {
 		logprintf(config->log, LOG_INFO, "Setting default none token string.\n");
 		config->none = parseTokenString(config, "-none-");
 	}
-
-
 }
 
 
@@ -643,6 +642,8 @@ int main(int argc, char** argv) {
 		.log = log,
 		.configPath = "",
 		.format = "",
+		.prefix = strdup(""),
+		.suffix = strdup(""),
 		.timebar = 10,
 		.update = 0,
 		.play = NULL,
@@ -702,6 +703,8 @@ int main(int argc, char** argv) {
 	if (config.log.stream != stderr) {
 		fclose(config.log.stream);
 	}
-	printf("Bye...\n");
+	printf("%sBye...%s", config.prefix, config.suffix);
+	free(config.prefix);
+	free(config.suffix);
 	return 0;
 }

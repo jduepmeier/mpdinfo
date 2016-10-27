@@ -23,6 +23,8 @@ struct Config {
 	char* programName; // init with argv[0]
 	char* configPath;
 	char* format;
+	char* prefix;
+	char* suffix;
 	LOGGER log;
 	unsigned timebar;
 	unsigned update;
