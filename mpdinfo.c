@@ -129,7 +129,7 @@ struct mpd_connection* mpdinfo_reconnect(Config* config) {
 			return NULL;
 		} else {
 			// try it later
-			logprintf(config->log, LOG_WARNING, "Connection lost, reconnection in 5 seconds.\n\f");
+			logprintf(config->log, LOG_WARNING, "Connection lost, reconnection in 5 seconds.\n");
 			if (sleep(5) > 0) {
 				logprintf(config->log, LOG_WARNING, "Sleep interrupted..");
 				return NULL;
@@ -178,7 +178,7 @@ struct mpd_connection* refresh(Config* config, struct mpd_connection* conn) {
 		free(out);
 	} else {
 		logprintf(config->log, LOG_ERROR, "%s\n", mpd_connection_get_error_message(conn));
-		//printf("Connection lost, reconnecting.\n\f");
+		printf("%sConnection lost, reconnecting.%s", config->prefix, config->suffix);
 		mpd_connection_free(conn);
 		conn = mpdinfo_reconnect(config);
 		if (!conn) {
