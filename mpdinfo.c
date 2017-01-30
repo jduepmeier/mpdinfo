@@ -28,9 +28,7 @@ int REFRESH = 1;
 volatile sig_atomic_t QUIT;
 
 // sets mpd host from arguments
-int setHost(int argc, char** argv, void* c) {
-	Config* config = (Config*) c;
-
+int setHost(int argc, char** argv, Config* config) {
 	free(config->connectionInfo->host);
 	config->connectionInfo->host = calloc(strlen(argv[1]) + 1, sizeof(char));
 	strncpy(config->connectionInfo->host,argv[1], strlen(argv[1]) + 1);
@@ -39,25 +37,20 @@ int setHost(int argc, char** argv, void* c) {
 }
 
 // sets mpd port from arguments
-int setPort(int argc, char** argv, void*c ) {
-	Config* config = (Config*) c;
+int setPort(int argc, char** argv, Config* config ) {
 	config->connectionInfo->port = strtoul(argv[1], NULL, 10);
 
 	return 0;
 }
 
 // set verbosity from arguments
-int setVerbosity(int argc, char** argv, void* c) {
-
-	Config* config = (Config*) c;
+int setVerbosity(int argc, char** argv, Config* config) {
 	config->log.verbosity = strtoul(argv[1], NULL, 10);
 
 	return 0;
 }
 
-int setFormat(int argc, char** argv, void* c) {
-	Config* config = (Config*) c;
-
+int setFormat(int argc, char** argv, Config* config) {
 	// check if there are empty formats
 	if (!config->play) {
 		config->play = parseTokenString(config, argv[1]);
@@ -78,24 +71,21 @@ int setFormat(int argc, char** argv, void* c) {
 }
 
 // sets the pause format string from arguments
-int setPauseFormat(int argc, char** argv, void* c) {
-	Config* config = (Config*) c;
+int setPauseFormat(int argc, char** argv, Config* config) {
 	config->pause = parseTokenString(config, argv[1]);
 
 	return 0;
 }
 
 // sets the play format string from arguments
-int setPlayFormat(int argc, char** argv, void* c) {
-	Config* config = (Config*) c;
+int setPlayFormat(int argc, char** argv, Config* config) {
 	config->play = parseTokenString(config, argv[1]);
 
 	return 0;
 }
 
 // sets the stop format string from arguments
-int setStopFormat(int argc, char** argv, void* c) {
-	Config* config = (Config*) c;
+int setStopFormat(int argc, char** argv, Config* config) {
 	config->stop = parseTokenString(config, argv[1]);
 
 	return 0;
