@@ -2,13 +2,22 @@
 
 DESTDIR=/
 INSTALL_DIR=usr/local/bin
-CFLAGS=-Wall -lmpdclient
+CFLAGS=-Wall
+LDFLAGS=-lmpdclient
+
+OBJECTS= $(patsubst %.c, %.o, $(wildcard *.c libs/*.c))
+DEPS= $(wildcard *.h libs/*.h)
+
 all: mpdinfo
 
 debug: CFLAGS += -g
 debug: mpdinfo
 
-mpdinfo: mpdinfo.c help.c format.c status.c libs/*.c
+mpdinfo: $(OBJECTS)
+
+%.o: %.c $(DEPS)
+	$(CC) $(CFLAGS) $(LDFLAGS) -c -o $@ $<
+
 
 install:
 	install -m 0755 -D mpdinfo $(DESTDIR)$(INSTALL_DIR)/mpdinfo
@@ -17,7 +26,8 @@ run:
 	valgrind --leak-check=full ./mpdinfo -c sample.conf
 
 clean:
-	rm -f mpdinfo
+	$(RM) $(OBJECTS)
+	$(RM) mpdinfo
 
 pack:
 	mkdir -p mpdinfo-1.1.0

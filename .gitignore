@@ -1,2 +1,3 @@
 mpdinfo
 tests
+*.o
