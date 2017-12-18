@@ -1,7 +1,6 @@
 mpdinfo
 =======
-
-show mpd information (for status displays, ...). Signal driven.
+Shows metadata like title, artist, ... Highly configurable over a simple config file. Works best with tools like (sm or [xecho](https://github.com/cbdevnet/xecho)) to display on a status display. It can be controlled via signals.
 
 requirements
 =======
