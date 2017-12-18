@@ -1,5 +1,4 @@
 #pragma once
-#include "libs/logger.h"
 #include "mpdinfo.h"
 
 int 	getRepeatStatus		(Config* config, int status);
@@ -26,4 +25,3 @@ char* 	getDate			(Config* config, int status);
 char* 	getTimeBar		(Config* config, int status);
 char* 	getDuration		(Config* config, int status);
 char* 	getQueueLength  (Config* config, int status);
-
