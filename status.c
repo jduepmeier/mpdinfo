@@ -245,6 +245,10 @@ char* getTimeBar(Config* config, int status) {
 		block = elapsed / blockSize;
 	}
 
+	if (block > (config->timebar - 2)) {
+		block = config->timebar - 2;
+	}
+
 	timeBar[0] = '[';
 	unsigned i;
 	for (i = 1; i < block; i++) {

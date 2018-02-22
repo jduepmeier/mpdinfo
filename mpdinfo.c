@@ -5,6 +5,8 @@
 #include <signal.h>
 #include <errno.h>
 
+#include <sys/time.h>
+
 #include <mpd/async.h>
 #include <mpd/status.h>
 #include <mpd/song.h>
