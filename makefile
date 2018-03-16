@@ -1,9 +1,8 @@
 .PHONY: clean install
 
-DESTDIR=/
-INSTALL_DIR=usr/local/bin
-CFLAGS=-Wall -std=gnu99
-LDFLAGS=-lmpdclient
+PREFIX?=/usr/local
+CFLAGS+=-Wall -std=gnu99
+LDFLAGS+=-lmpdclient
 
 OBJECTS= $(patsubst %.c, %.o, $(wildcard *.c libs/*.c))
 DEPS= $(wildcard *.h libs/*.h)
@@ -16,11 +15,13 @@ debug: mpdinfo
 mpdinfo: $(OBJECTS)
 
 %.o: %.c $(DEPS)
-	$(CC) $(CFLAGS) $(LDFLAGS) -c -o $@ $<
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -c -o $@ $<
+	$(MAKE) -C docs
 
 
 install:
-	install -m 0755 -D mpdinfo $(DESTDIR)$(INSTALL_DIR)/mpdinfo
+	install -m 0755 -D mpdinfo $(DESTDIR)$(PREFIX)/bin/mpdinfo
+	$(MAKE) -C docs install
 
 run:
 	valgrind --leak-check=full ./mpdinfo -c sample.conf
@@ -28,6 +29,7 @@ run:
 clean:
 	$(RM) $(OBJECTS)
 	$(RM) mpdinfo
+	$(MAKE) -C docs clean
 
 pack:
 	mkdir -p mpdinfo-1.1.0
