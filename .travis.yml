@@ -1,0 +1,8 @@
+language: c
+script:
+    - make
+addons:
+  apt:
+    packages:
+      - libmpdclient-dev
+      - libmpdclient2
