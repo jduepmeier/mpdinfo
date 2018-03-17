@@ -2,7 +2,7 @@
 
 PREFIX?=/usr/local
 CFLAGS+=-Wall -std=gnu99
-LDFLAGS+=-lmpdclient
+LDLIBS+=-lmpdclient
 
 OBJECTS= $(patsubst %.c, %.o, $(wildcard *.c libs/*.c))
 DEPS= $(wildcard *.h libs/*.h)
