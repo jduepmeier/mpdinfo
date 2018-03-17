@@ -1,6 +1,8 @@
 mpdinfo
 =======
 [![Coverity Scan Build Status](https://scan.coverity.com/projects/15020/badge.svg)](https://scan.coverity.com/projects/jduepmeier-easy_args)
+[![Travis Build Status](https://travis-ci.org/jduepmeier/mpdinfo.svg?branch=master)](https://travis-ci.org/jduepmeier/mpdinfo)
+
 
 
 Shows metadata like title, artist, ... Highly configurable over a simple config file. Works best with tools like (sm or [xecho](https://github.com/cbdevnet/xecho)) to display on a status display. It can be controlled via signals.
