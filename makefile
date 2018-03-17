@@ -3,7 +3,7 @@
 DESTDIR=/
 INSTALL_DIR=usr/local/bin
 CFLAGS=-Wall -std=gnu99
-LDFLAGS=-lmpdclient
+LDLIBS=-lmpdclient
 
 OBJECTS= $(patsubst %.c, %.o, $(wildcard *.c libs/*.c))
 DEPS= $(wildcard *.h libs/*.h)
