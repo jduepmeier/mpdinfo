@@ -1,0 +1,73 @@
+.TH MPDINFO 1 "March 2018" "1.2"
+.SH NAME
+mpdinfo \- displays mpd metadata
+.SH SYNOPSIS
+.BI "mpdinfo [" oprions "] <" mode "> [" mode-arguments "]"
+.SH DESCRIPTION
+.BR "mpdinfo " "shows metadata like title, artist, ... of the currently played song in mpd"
+.SH OPTIONS
+.TP
+.BR \-c ", " \-\-config " config"
+Path to the configuration file. If you like to use a configuration file, you have to add this option
+.TP
+.BR \-f ", " \-\-format " format-string"
+Defines the global format
+.TP
+.BR \-fpa ", " \-\-format=pause " format-string"
+Defines the format if mpd is stopped
+.TP
+.BR \-fpl ", " \-\-fomat=play " format-string"
+Defines the format if mpd played a song
+.TP
+.BR \-fs ", " \-\-format=stop " format-string"
+Defines the format if mpd is stopped
+.TP
+.BR \-h ", " \-\-host " host"
+Connect to server at host.
+.TP
+.BR \-p ", " \-\-port " port"
+Connect to server at port [6600]
+.TP
+.BR \-hp ", " \-\-help "
+Print the help message
+.TP
+.BR \-v ", " \-\-verbosity " level
+Set verbosity level between 0 till 5, where 0 is ERROR and 5 is DEBUG.
+.SH MODES
+.BI ????
+.SH MODES OPTIONS
+.BI ???
+.SH FORMAT OPTIONS
+you can use the following to format the output:
+.TS
+l		l.
+%status%	- current status, can be playing, pause, stopped
+%artist%	- artist of the current track
+%title%	- title of the current track
+%volume%	- current output volume
+%filename%	- name of the current file
+%elapsed_time%	- time the current track is running
+%queue_length%	- length of the current queue
+%timebar%	- a simple progress bar of the current track
+.TE
+.SH Control signals
+with this signals you can control your mpdinfo
+.TS
+l		l.
+* SIGHUB	- forces a refresh
+* SIGQUIT	- quits mpdinfo
+.TE
+.SH Example
+mpdinfo --format "%artist% - %title%"
+.SH BUGS
+Please report bugs to the projects issue tracker at https://github.com/jduepmeier/mpdinfo/issues
+.SH AUTHORS
+Jan "mpease" Düpmeier <j.duepmeier@gmail.com>
+.SH "HOMEPAGE"
+-> https://github.com/jduepmeier/mpdinfo
+.SH SEE ALSO
+.TS
+l.
+The project xecho at htttps://github.com/cbdevnet/xecho,
+mpc(1), mpd(1), sm(6)
+.TE
