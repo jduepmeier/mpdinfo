@@ -1,14 +1,14 @@
-.TH MPDINFO 1 "March 2018" "v1.2"
+.TH MPDINFO 1 "March 2018" "1.2"
 .SH NAME
-mpdinfo \- dispilays mpd metadata on a display
+mpdinfo \- displays mpd metadata
 .SH SYNOPSIS
 .BI "mpdinfo [" oprions "] <" mode "> [" mode-arguments "]"
 .SH DESCRIPTION
-.BR "mpdinfo " "shows metadata like title, artist, ... from the current played song in mpd"
-.SH OPRIONS
+.BR "mpdinfo " "shows metadata like title, artist, ... of the currently played song in mpd"
+.SH OPTIONS
 .TP
 .BR \-c ", " \-\-config " config"
-Path to the configuration file. If you like to use a configuration file, you have to add this oprion
+Path to the configuration file. If you like to use a configuration file, you have to add this option
 .TP
 .BR \-f ", " \-\-format " format-string"
 Defines the global format
@@ -41,10 +41,10 @@ Set verbosity level between 0 till 5, where 0 is ERROR and 5 is DEBUG.
 you can use the following to format the output:
 .TS
 l		l.
-%status%	- current status can be playing, pause, stopped
+%status%	- current status, can be playing, pause, stopped
 %artist%	- artist of the current track
 %title%	- title of the current track
-%volumne%	- current output volume
+%volume%	- current output volume
 %filename%	- name of the current file
 %elapsed_time%	- time the current track is running
 %queue_length%	- length of the current queue
@@ -63,7 +63,7 @@ mpdinfo --format "%artist% - %title%"
 Please report bugs to the projects issue tracker at https://github.com/jduepmeier/mpdinfo/issues
 .SH AUTHORS
 Jan "mpease" Düpmeier <j.duepmeier@gmail.com>
-.SH "HOMPAGE"
+.SH "HOMEPAGE"
 -> https://github.com/jduepmeier/mpdinfo
 .SH SEE ALSO
 .TS
